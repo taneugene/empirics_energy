@@ -1,0 +1,11 @@
+#Ignore compiled documents
+*.pdf
+
+# Ignore data
+data/
+
+# R boilerplate
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
