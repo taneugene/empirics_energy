@@ -1,0 +1,69 @@
+
+\documentclass[12pt]{article}
+\usepackage{bibentry}
+\usepackage[margin=1.4in]{geometry}
+\pretolerance=10000
+\bibliographystyle{plainnat}
+\usepackage{natbib}
+\nobibliography*
+\usepackage[colorlinks, urlcolor=blue]{hyperref}
+\renewcommand{\arraystretch}{1.5}
+\usepackage[nodisplayskipstretch]{setspace}
+\newenvironment{tight_itemize}{
+\begin{itemize}
+  \setlength{\itemsep}{0pt}
+  \setlength{\parskip}{0pt}
+}{\end{itemize}}
+
+
+\begin{document}
+
+
+
+\begin{flushleft}
+Columbia University SIPA	
+
+Fall 2019
+
+\end{flushleft}
+
+
+\begin{center}
+\textbf{Empirical Analysis of Energy Markets - U6616}
+
+Empirical Exercise I
+
+\end{center}
+
+\begin{flushright}
+Prof. Ignacia Mercadal	
+\end{flushright}
+
+This problem set is due on \textbf{September 26th at the beginning of the class}. Students are allowed to discuss with others, but each student must submit his or her own solution. Please submit the homework as an R notebook (if there are data files, they put all the files in a zip file). The code must run without errors. If there are errors, it will cost you 10 points and you will be given 24 hours to correct it, after which you will have to indicate clearly where was the error.
+ 
+ 
+\begin{enumerate}
+	
+	\item Go to the energy dataset provided by S\&P Global available \href{https://platform.mi.spglobal.com/web/client?auth=inherit#news/home}{here}.\footnote{If you don't have access using your Columbia email, send an email to the professor.} Go to Power/Generation Supply Curve and download data for an ISO of your choice for 2 years.
+	\item Start by describing the data. For this, build graphs or tables that convey the following information, separately for each year:
+		\begin{enumerate}
+		\item 	What is the fuel composition of this market according to capacity (i.e. how much capacity for each fuel)? And in terms of net generation? Why are they different or similar?\footnote{Net generation is the amount of energy produced by a power plant, net of the energy used to produce. Basically, the amount of energy that comes out of the plant. NCapacity is the maximum amount of energy  that a plant can produce in a given hour. For this reason, net generation is measured in MWh over a certain period and capacity in MW.}
+		\item How high is the share of environmental costs in the variable cost? How does this vary by fuel? 
+		\item How much does each fuel contribute to $NO_x$, $SO_2$, and $CO_2$ emissions?
+		\item How is the share of fixed vs. variable cost in the total cost by fuel?
+		\item Do these answers vary by year?
+		\item How do operating vs. retired plants differ, if they do?
+		\end{enumerate}
+
+	\item Organize the data and plot the supply curve using a different color for each fuel (reproduce the plot you can build online). Use a loop to create a separate plot for each year.
+	\item Suppose we want to know if the dispatch of power plants is efficient, i.e. if cheaper plants are dispatched first. Do cheaper power plants produce more? To check this, do the following:
+		\begin{enumerate}
+		\item Run an OLS regression of net generation on cost. What cost is the most relevant here? Try total cost and variable cost and argue why/how results vary with the cost definition. Briefly discuss.
+		\item Now control for capacity, how do results change?
+		\item What else could you be missing that may lead to bias? Can you control for it?	Add some control that you consider relevant and discuss how it changes the results. 
+		\end{enumerate}
+
+\end{enumerate}
+
+
+\end{document}
