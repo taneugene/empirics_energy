@@ -20,21 +20,17 @@ download_file <- function(url){
   # Unzip the eia 860 data only [hardcoded]
   if (str_detect(fname,'zip')){
     unzip(fname, exdir = data_folder)
-    fname <- "data/3_5_Multifuel_Y2019_Early_Release.xlsx"
+    fname <- "data/3_1_Generator_Y2019_Early_Release.xlsx"
   }
   return(fname)
 }
 
-fnames <- urls %>%
-  map(download_file)
+# Get the currently operating generators and the retired ones and outer join on columns
+# Guesses for data types don't work well, read in all as text and then convert to numeric later
+operable = as.data.table(read_excel(fnames[[1]], sheet = "Operable", skip = 2,col_types = 'text'))
+retired = as.data.table(read_excel(fnames[[1]], sheet = "Retired and Canceled", skip = 2,col_types = 'text'))
+df = rbindlist(list(operable, retired), use.names = T, fill =  T, idcol = T)
+rm(operable,retired)
 
-operable <- read_excel("data/3_5_Multifuel_Y2019_Early_Release.xlsx",
-                       sheet = "Operable",
-                       col_types = c("numeric", "text", "numeric", "text", "text", "text", "text", "text", "text", "text", "text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "numeric", "numeric", "numeric", "numeric", "text", "text", "text", "text", "text", "text"),
-                       skip = 2)
-retired <- read_excel("data/3_5_Multifuel_Y2019_Early_Release.xlsx",
-                      sheet = "Retired and Canceled",
-                      skip = 2)
-
-
-
+# Convert all columns which are labelled with 'Plant Code', has 'MW', 'Year', or 'Month' to numeric data type,
+df
