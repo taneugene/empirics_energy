@@ -28,7 +28,7 @@ download_file <- function(url){
 fnames <- map(urls, download_file)
 
 # Get the currently operating generators and the retired ones and outer join on columns
-# Guesses for data types don't work well, read in all as text and then convert to numeric later
+# Guesses for data types don't work well, so reading in all as text and then convert to numeric later
 operable <-  as.data.table(read_excel(fnames[[1]], sheet = "Operable", skip = 2,col_types = 'text', na = 'NA'))
 retired <-  as.data.table(read_excel(fnames[[1]], sheet = "Retired and Canceled", skip = 2,col_types = 'text', na = 'NA'))
 df <-  rbindlist(list(operable, retired), use.names = T, fill =  T, idcol = T)
@@ -47,7 +47,7 @@ subtract <-  df[!is.na(`Retirement Year`),.(year = `Retirement Year`,capacity_su
 setkey(add, year, Technology)
 setkey(subtract, year, Technology)
 # Make sure there's an entry for each year-technology pair
-# (this is the hardest part since you don't know there's a bug until you plot)
+# (this is the hardest part since it's easy to overlook a bug until you plot)
 cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
 setkey(cap, year, Technology)
 cap <-  merge(cap,merge(add, subtract, all = TRUE),all.x = TRUE)
@@ -60,17 +60,21 @@ cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractio
 cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
 
 # Set colors
-color_key = list("coal" = "brown4",
+color_key = list('other' = 'coral',
+                 "coal" = "brown4",
      'petroleum' = 'grey8',
      'gas' = 'dimgrey',
-     'solar' = 'gold',
-     'wind' = 'aliceblue',
-     'hydro' = 'cornflowerblue',
-     'nuclear' = 'lightgoldenrod',
+     'combined cycle' = 'tan4',
      'waste' = 'red4',
-     'other' = 'coral')
+     'nuclear' = 'lightgoldenrod',
+     'hydro' = 'cornflowerblue',
+     'wind' = 'aliceblue',
+     'solar' = 'gold',
+     'geothermal' = 'brown2'
+     )
 techs = unique(cap_final$Technology)
 colors = rep('coral', length(techs))
+colors = setNames(colors, techs)
 
 # Aggregate by types
 cap_final[, tech := "other"]
@@ -80,31 +84,46 @@ for (fuel in names(color_key)){
   cap_final[grep(fuel,Technology,ignore.case = TRUE), tech:=fuel]
   cap_final[grep(fuel,Technology,ignore.case = TRUE), color:=color_key[fuel]]
 }
+# change tech to a factor(categories)
 cap_final[,tech:= as.factor(tech)]
+# reorder in order of pollution levels
+cap_final[,tech := factor(cap_final[,tech],levels = names(color_key))]
+# Change tech also to a factor
+cap_final[,Technology:= as.factor(Technology)]
+key = unique(cap_final[,.(tech,Technology)])
+setkey(key, tech)
+cap_final[,Technology := factor(cap_final[,Technology],levels = key[,Technology])]
 cap_final[,color:= as.factor(color)]
-setkey(cap_final, year, tech, Technology)
+setkey(cap_final, tech, Technology, year)
+cap_agg = cap_final[,.(capacity = sum(capacity)), , .(tech,year, color)]
 
-# Plot the disaggregated data
+# Unaggregated Technology stacked area chart
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   geom_area(position = 'stack') +
   theme(legend.text = element_text(size = 8)) +
-  guides(fill = guide_legend(ncol = 1))+
-  scale_fill_manual(values = colors)
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (MW)") +
+  ggtitle("Capacity by Technology and Year")
+  # scale_fill_manual(values = colors)
 ggsave('stacked_capacity_all.pdf', width = 16, height = 9)
 
+# Unaggregated Technology stacked area chart as a proportion of total capacity
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   geom_area(position = 'fill') +
   theme(legend.text = element_text(size = 8)) +
-  guides(fill = guide_legend(ncol = 1))
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (% of total)") +
+  ggtitle("Capacity by Technology and Year")
+  # scale_fill_manual(values = colors) +
 ggsave('proportion_capacity_all.pdf', width = 16, height = 9)
 
-cap_agg = cap_final[,.(capacity = sum(capacity)), , .(tech,year, color)]
-
-# Plot the aggregated data
+# Aggregated Technology - color codedd
 ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   geom_area(position = 'stack') +
   theme(legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (MW)") +
+  ggtitle("Capacity by Technology and Year") +
   scale_fill_manual(values = color_key)
 ggsave('stacked_capacity_agg.pdf', width = 16, height = 9)
 
@@ -112,6 +131,8 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   geom_area(position = 'fill') +
   theme(legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(ncol = 1)) +
-  scale_fill_manual(values = color_key)
+  scale_fill_manual(values = color_key) +
+  ylab("Nameplate Capacity (% of total)") +
+  ggtitle("Capacity by Technology and Year")
 ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
 
