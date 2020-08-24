@@ -2,17 +2,9 @@ library(tidyverse)
 library(data.table)
 library(readxl)
 
-# Make a directory called data
-data_folder = "data"
-dir.create(file.path(".", data_folder), showWarnings = T)
-
-# Download data
-urls <- c("https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip",
-          "https://www.eia.gov/electricity/annual/xls/epa_04_02_a.xlsx",
-          "https://www.eia.gov/electricity/annual/xls/epa_04_02_b.xlsx")
-
-# Function to download and unzip
 download_file <- function(url){
+  #' Function to download and unzip.
+  #' hardcoded filename for the eia 860 data
   fname <- file.path(data_folder, basename(url))
   if (!file.exists(fname)){
     download.file(url, fname)
@@ -24,6 +16,30 @@ download_file <- function(url){
   }
   return(fname)
 }
+
+readin <- function(fname, skip=2){
+  #' Function to read in an excel file as a dataframe
+  as.data.table(read_excel(fname, skip = skip))
+}
+
+
+# Make a directory called data
+data_folder = "data"
+dir.create(file.path(".", data_folder), showWarnings = T)
+
+# Download data
+urls <- c("https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip", # Raw EIA860 data. nonexhaustive, but seems includes all operating capacity since data started being collected
+          "https://www.eia.gov/electricity/annual/xls/epa_04_02_a.xlsx",# Summary capacity data for fossil energy back 10 years
+          "https://www.eia.gov/electricity/annual/xls/epa_04_02_b.xlsx", # Summary capacity data for renewables back 10 years
+          "https://www.eia.gov/electricity/data/state/emission_annual.xls", # Emissions only back to 1990
+          "https://www.eia.gov/totalenergy/data/browser/csv.php?tbl=T11.06", # weird url but ok, emissions back to 1973)
+          "https://www.eia.gov/electricity/data/water/xls/cooling_summary_2018.xlsx", # Water data 2018, only source
+          "https://www.eia.gov/electricity/data/water/xls/cooling_summary_2017.xlsx", # 2017
+          "https://www.eia.gov/electricity/data/water/archive/xls/cooling_summary_2016.xlsx", #2016
+          "https://www.eia.gov/electricity/data/water/archive/xls/cooling_summary_2015.xlsx", #2015
+          "https://www.eia.gov/electricity/data/water/archive/xls/cooling_summary_2014.xlsx" #2014
+)
+
 
 fnames <- map(urls, download_file)
 
@@ -62,19 +78,19 @@ cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
 # Set colors
 color_key = list('other' = 'coral',
                  "coal" = "brown4",
-     'petroleum' = 'grey8',
-     'gas' = 'dimgrey',
-     'combined cycle' = 'tan4',
-     'waste' = 'red4',
-     'nuclear' = 'lightgoldenrod',
-     'hydro' = 'cornflowerblue',
-     'wind' = 'aliceblue',
-     'solar' = 'gold',
-     'geothermal' = 'brown2'
-     )
-techs = unique(cap_final$Technology)
-colors = rep('coral', length(techs))
-colors = setNames(colors, techs)
+                 'petroleum' = 'grey8',
+                 'gas' = 'dimgrey',
+                 'combined cycle' = 'tan4',
+                 'waste' = 'red4',
+                 'nuclear' = 'lightgoldenrod',
+                 'hydro' = 'cornflowerblue',
+                 'wind' = 'aliceblue',
+                 'solar' = 'gold',
+                 'geothermal' = 'brown2'
+                 )
+techs <-  unique(cap_final$Technology)
+colors <-  rep('coral', length(techs))
+colors <-  setNames(colors, techs)
 
 # Aggregate by types
 cap_final[, tech := "other"]
@@ -90,7 +106,7 @@ cap_final[,tech:= as.factor(tech)]
 cap_final[,tech := factor(cap_final[,tech],levels = names(color_key))]
 # Change tech also to a factor
 cap_final[,Technology:= as.factor(Technology)]
-key = unique(cap_final[,.(tech,Technology)])
+key <-  unique(cap_final[,.(tech,Technology)])
 setkey(key, tech)
 cap_final[,Technology := factor(cap_final[,Technology],levels = key[,Technology])]
 cap_final[,color:= as.factor(color)]
@@ -103,7 +119,7 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   theme(legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(ncol = 1)) +
   ylab("Nameplate Capacity (MW)") +
-  ggtitle("Capacity by Technology and Year")
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
   # scale_fill_manual(values = colors)
 ggsave('stacked_capacity_all.pdf', width = 16, height = 9)
 
@@ -113,7 +129,7 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   theme(legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(ncol = 1)) +
   ylab("Nameplate Capacity (% of total)") +
-  ggtitle("Capacity by Technology and Year")
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
   # scale_fill_manual(values = colors) +
 ggsave('proportion_capacity_all.pdf', width = 16, height = 9)
 
@@ -123,7 +139,7 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   theme(legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(ncol = 1)) +
   ylab("Nameplate Capacity (MW)") +
-  ggtitle("Capacity by Technology and Year") +
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") +
   scale_fill_manual(values = color_key)
 ggsave('stacked_capacity_agg.pdf', width = 16, height = 9)
 
@@ -133,6 +149,71 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   guides(fill = guide_legend(ncol = 1)) +
   scale_fill_manual(values = color_key) +
   ylab("Nameplate Capacity (% of total)") +
-  ggtitle("Capacity by Technology and Year")
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
 ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
+
+##################
+# Emissions by year
+em = fread(fnames[[5]])
+em[, `:=`(year = YYYYMM%/%100, month =  YYYYMM%%100)]
+# Get the annual data which is coded as the 13th month
+em = em[!grepl('total',Description, ignore.case = TRUE) & month==13]
+# Check everything is in the same units, convert to factor
+em[,c('Unit', 'Description','Value'):= list(as.factor(Unit),as.factor(Description),as.numeric(Value))]
+# Make missing values 0
+em[is.na(Value), Value := 0]
+
+# Choose colors (unnecessary)
+colors_co2 = c()
+"%notin%" <- Negate("%in%")
+for (des in unique(em$Description)){
+  for (fuel in names(color_key)){
+    if (grepl(fuel,des, ignore.case = T)){
+      colors_co2[des] <- color_key[fuel]
+    }
+  }
+  if (des %notin% names(colors_co2)){
+    colors_co2[des] <-  'tomato4'
+  }
+}
+
+# Make the plot
+ggplot(em, aes(x= year, y = Value, fill = Description))+
+  geom_area(position = 'stack') +
+  ggtitle("United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
+  ylab("Million Metric Tons of CO2") +
+  scale_fill_manual(values = colors_co2)
+ggsave('emissions.pdf', width = 16, height = 9)
+
+#################
+# Water consumption
+
+h2ofnames = fnames[6:length(fnames)]
+h2o = rbindlist(map(h2ofnames, readin))
+h2o[,`:=`(Year = as.integer(Year),
+          Month = as.integer(Month),
+          `Generator Primary Technology` = as.factor(`Generator Primary Technology`))]
+setkey(h2o,Year,`Generator Primary Technology`)
+# Select the columns with the relevant data
+cols = grep('Water.+Million', names(h2o), value = T)
+# This command works for one column but not the other...
+# h2o[, cols := lapply(.SD,nafill(.SD,fill = 0)), .SDcols = cols]
+# Looks like hardcoding will be easier
+h2o[,"withdrawals":= get(cols[1])]
+h2o[,"consumption":= get(cols[2])]
+h2o[is.na(withdrawals),withdrawals:=0]
+h2o[is.na(consumption),consumption:=0]
+h2o_summary = h2o[,.(withdrawals = sum(withdrawals), consumption = sum(consumption)), by = key(h2o)]
+
+ggplot(h2o_summary, aes(x = Year, y = withdrawals, fill = `Generator Primary Technology`)) +
+  geom_area(position = 'stack') +
+  ylab('Water Withdrawal Volume (Million Gallons)')  +
+  ggtitle('Water withdrawal volume (Million Gallons)', subtitle = 'source: EIA Thermoelectric Cooling data')
+ggsave('water_withdrawal.pdf')
+ggplot(h2o_summary, aes(x = Year, y = consumption, fill = `Generator Primary Technology`)) +
+  geom_area(position = 'stack') +
+  ylab('Water Consumption Volume (Million Gallons)')  +
+  ggtitle('Water Consumption volume (Million Gallons)', subtitle = 'source: EIA Thermoelectric Cooling data')
+ggsave('water_consumption.pdf')
+
 
