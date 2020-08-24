@@ -23,6 +23,7 @@ readin <- function(fname, skip=2){
 }
 
 
+
 # Make a directory called data
 data_folder = "data"
 dir.create(file.path(".", data_folder), showWarnings = T)
@@ -39,8 +40,6 @@ urls <- c("https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip", # 
           "https://www.eia.gov/electricity/data/water/archive/xls/cooling_summary_2015.xlsx", #2015
           "https://www.eia.gov/electricity/data/water/archive/xls/cooling_summary_2014.xlsx" #2014
 )
-
-
 fnames <- map(urls, download_file)
 
 # Get the currently operating generators and the retired ones and outer join on columns
@@ -60,22 +59,24 @@ add <- df[!is.na(`Operating Year`),.(year = `Operating Year`,capacity_additions 
 subtract <-  df[!is.na(`Retirement Year`),.(year = `Retirement Year`,capacity_subtractions = sum(`Nameplate Capacity (MW)`,na.rm = T)), by = .(`Retirement Year`, Technology)]
 
 # Join the additions and subtractions
+## Set keys
 setkey(add, year, Technology)
 setkey(subtract, year, Technology)
-# Make sure there's an entry for each year-technology pair
-# (this is the hardest part since it's easy to overlook a bug until you plot)
+## Make sure there's a key for each year-technology pair
+## (this is the hardest part since it's easy to overlook a bug until you plot)
 cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
 setkey(cap, year, Technology)
+## now merge in the additions and subtractions
 cap <-  merge(cap,merge(add, subtract, all = TRUE),all.x = TRUE)
-
-# If there were no additions or subtractions in a year of a technology, set to 0.
+## If there were no additions or subtractions in a year of a technology, set to 0.
 cap[is.na(capacity_additions), capacity_additions:= 0]
 cap[is.na(capacity_subtractions), capacity_subtractions:= 0]
-# Add the additions and retirements and cancellations
+# Calculate the net capacity change and the cumulative build of generating capacity
 cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractions), by = key(cap)]
 cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
 
-# Set colors
+# Set colors to use for plotting graphs
+## Set high level groups
 color_key = list('other' = 'coral',
                  "coal" = "brown4",
                  'petroleum' = 'grey8',
@@ -88,29 +89,38 @@ color_key = list('other' = 'coral',
                  'solar' = 'gold',
                  'geothermal' = 'brown2'
                  )
+## Get a list of technologies
 techs <-  unique(cap_final$Technology)
+## Make a hash lookup for the set of 27 techs
 colors <-  rep('coral', length(techs))
 colors <-  setNames(colors, techs)
-
-# Aggregate by types
+## Aggregate by types
 cap_final[, tech := "other"]
 cap_final[, color := "coral"]
+## loop through the big categories and search for them in the technologies.
 for (fuel in names(color_key)){
+  # Make a second key for the 27 techs
   colors[grep(fuel,techs,ignore.case = TRUE)] = color_key[fuel]
+  # add a column with the 10 techs
   cap_final[grep(fuel,Technology,ignore.case = TRUE), tech:=fuel]
+  # add a column for the color
   cap_final[grep(fuel,Technology,ignore.case = TRUE), color:=color_key[fuel]]
 }
+
 # change tech to a factor(categories)
 cap_final[,tech:= as.factor(tech)]
 # reorder in order of pollution levels
 cap_final[,tech := factor(cap_final[,tech],levels = names(color_key))]
 # Change tech also to a factor
 cap_final[,Technology:= as.factor(Technology)]
+# Make a lookup from tech group to technology
 key <-  unique(cap_final[,.(tech,Technology)])
 setkey(key, tech)
+# Change data types to factors then reset key
 cap_final[,Technology := factor(cap_final[,Technology],levels = key[,Technology])]
 cap_final[,color:= as.factor(color)]
 setkey(cap_final, tech, Technology, year)
+# Aggregate on the Technologies to small techs
 cap_agg = cap_final[,.(capacity = sum(capacity)), , .(tech,year, color)]
 
 # Unaggregated Technology stacked area chart
@@ -143,6 +153,7 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   scale_fill_manual(values = color_key)
 ggsave('stacked_capacity_agg.pdf', width = 16, height = 9)
 
+# Aggregated Technology as % - color coded
 ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   geom_area(position = 'fill') +
   theme(legend.text = element_text(size = 8)) +
@@ -155,15 +166,16 @@ ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
 ##################
 # Emissions by year
 em = fread(fnames[[5]])
+# Get the year and month by getting the quotient and remainder after dividing by 100
 em[, `:=`(year = YYYYMM%/%100, month =  YYYYMM%%100)]
-# Get the annual data which is coded as the 13th month
+# Get the annual data which is coded as the 13th month in this dataset
 em = em[!grepl('total',Description, ignore.case = TRUE) & month==13]
 # Check everything is in the same units, convert to factor
 em[,c('Unit', 'Description','Value'):= list(as.factor(Unit),as.factor(Description),as.numeric(Value))]
 # Make missing values 0
 em[is.na(Value), Value := 0]
 
-# Choose colors (unnecessary)
+# Make a color lookup (to make it look similar to above plot based on technology)
 colors_co2 = c()
 "%notin%" <- Negate("%in%")
 for (des in unique(em$Description)){
@@ -177,7 +189,7 @@ for (des in unique(em$Description)){
   }
 }
 
-# Make the plot
+# Plot emissions over time by technology of generator
 ggplot(em, aes(x= year, y = Value, fill = Description))+
   geom_area(position = 'stack') +
   ggtitle("United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
@@ -188,28 +200,41 @@ ggsave('emissions.pdf', width = 16, height = 9)
 #################
 # Water consumption
 
+# 5 data frames, one for each year from 2014-2018
 h2ofnames = fnames[6:length(fnames)]
+# Columns match up exactly so we can do this
 h2o = rbindlist(map(h2ofnames, readin))
+# Change data types
 h2o[,`:=`(Year = as.integer(Year),
           Month = as.integer(Month),
           `Generator Primary Technology` = as.factor(`Generator Primary Technology`))]
+# Set key
 setkey(h2o,Year,`Generator Primary Technology`)
 # Select the columns with the relevant data
 cols = grep('Water.+Million', names(h2o), value = T)
-# This command works for one column but not the other...
+
+# This command works for one column but not the other... one column is bound but not other.
+# unsure how to fix this, so...
 # h2o[, cols := lapply(.SD,nafill(.SD,fill = 0)), .SDcols = cols]
+
 # Looks like hardcoding will be easier
+# shorten the names of columns to make them easy to type
 h2o[,"withdrawals":= get(cols[1])]
 h2o[,"consumption":= get(cols[2])]
+# Set nas to 0
 h2o[is.na(withdrawals),withdrawals:=0]
 h2o[is.na(consumption),consumption:=0]
+# sum by the technology-year key
 h2o_summary = h2o[,.(withdrawals = sum(withdrawals), consumption = sum(consumption)), by = key(h2o)]
 
+# Plot water withdrawals over time by technology
 ggplot(h2o_summary, aes(x = Year, y = withdrawals, fill = `Generator Primary Technology`)) +
   geom_area(position = 'stack') +
   ylab('Water Withdrawal Volume (Million Gallons)')  +
   ggtitle('Water withdrawal volume (Million Gallons)', subtitle = 'source: EIA Thermoelectric Cooling data')
 ggsave('water_withdrawal.pdf')
+
+# Plot water consumption over time by technology
 ggplot(h2o_summary, aes(x = Year, y = consumption, fill = `Generator Primary Technology`)) +
   geom_area(position = 'stack') +
   ylab('Water Consumption Volume (Million Gallons)')  +
