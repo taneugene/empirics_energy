@@ -25,7 +25,7 @@ readin <- function(fname, skip=2){
 
 
 # Make a directory called data
-data_folder = "data"
+data_folder <-  "data"
 dir.create(file.path(".", data_folder), showWarnings = T)
 
 # Download data
@@ -165,11 +165,11 @@ ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
 
 ##################
 # Emissions by year
-em = fread(fnames[[5]])
+em <-  fread(fnames[[5]])
 # Get the year and month by getting the quotient and remainder after dividing by 100
 em[, `:=`(year = YYYYMM%/%100, month =  YYYYMM%%100)]
 # Get the annual data which is coded as the 13th month in this dataset
-em = em[!grepl('total',Description, ignore.case = TRUE) & month==13]
+em <-  em[!grepl('total',Description, ignore.case = TRUE) & month==13]
 # Check everything is in the same units, convert to factor
 em[,c('Unit', 'Description','Value'):= list(as.factor(Unit),as.factor(Description),as.numeric(Value))]
 # Make missing values 0
@@ -201,9 +201,9 @@ ggsave('emissions.pdf', width = 16, height = 9)
 # Water consumption
 
 # 5 data frames, one for each year from 2014-2018
-h2ofnames = fnames[6:length(fnames)]
+h2ofnames <- fnames[6:length(fnames)]
 # Columns match up exactly so we can do this
-h2o = rbindlist(map(h2ofnames, readin))
+h2o <-  rbindlist(map(h2ofnames, readin))
 # Change data types
 h2o[,`:=`(Year = as.integer(Year),
           Month = as.integer(Month),
@@ -211,7 +211,7 @@ h2o[,`:=`(Year = as.integer(Year),
 # Set key
 setkey(h2o,Year,`Generator Primary Technology`)
 # Select the columns with the relevant data
-cols = grep('Water.+Million', names(h2o), value = T)
+cols <-  grep('Water.+Million', names(h2o), value = T)
 
 # This command works for one column but not the other... one column is bound but not other.
 # unsure how to fix this, so...
@@ -225,7 +225,7 @@ h2o[,"consumption":= get(cols[2])]
 h2o[is.na(withdrawals),withdrawals:=0]
 h2o[is.na(consumption),consumption:=0]
 # sum by the technology-year key
-h2o_summary = h2o[,.(withdrawals = sum(withdrawals), consumption = sum(consumption)), by = key(h2o)]
+h2o_summary <-  h2o[,.(withdrawals = sum(withdrawals), consumption = sum(consumption)), by = key(h2o)]
 
 # Plot water withdrawals over time by technology
 ggplot(h2o_summary, aes(x = Year, y = withdrawals, fill = `Generator Primary Technology`)) +
