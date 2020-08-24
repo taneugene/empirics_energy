@@ -25,6 +25,8 @@ download_file <- function(url){
   return(fname)
 }
 
+fnames <- map(urls, download_file)
+
 # Get the currently operating generators and the retired ones and outer join on columns
 # Guesses for data types don't work well, read in all as text and then convert to numeric later
 operable <-  as.data.table(read_excel(fnames[[1]], sheet = "Operable", skip = 2,col_types = 'text', na = 'NA'))
@@ -57,12 +59,37 @@ cap[is.na(capacity_subtractions), capacity_subtractions:= 0]
 cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractions), by = key(cap)]
 cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
 
-# Plot the data
+# Set colors
+color_key = list("coal" = "brown4",
+     'petroleum' = 'grey8',
+     'gas' = 'dimgrey',
+     'solar' = 'gold',
+     'wind' = 'aliceblue',
+     'hydro' = 'cornflowerblue',
+     'nuclear' = 'lightgoldenrod',
+     'waste' = 'red4',
+     'other' = 'coral')
+techs = unique(cap_final$Technology)
+colors = rep('coral', length(techs))
 
+# Aggregate by types
+cap_final[, tech := "other"]
+cap_final[, color := "coral"]
+for (fuel in names(color_key)){
+  colors[grep(fuel,techs,ignore.case = TRUE)] = color_key[fuel]
+  cap_final[grep(fuel,Technology,ignore.case = TRUE), tech:=fuel]
+  cap_final[grep(fuel,Technology,ignore.case = TRUE), color:=color_key[fuel]]
+}
+cap_final[,tech:= as.factor(tech)]
+cap_final[,color:= as.factor(color)]
+setkey(cap_final, year, tech, Technology)
+
+# Plot the disaggregated data
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   geom_area(position = 'stack') +
   theme(legend.text = element_text(size = 8)) +
-  guides(fill = guide_legend(ncol = 1))
+  guides(fill = guide_legend(ncol = 1))+
+  scale_fill_manual(values = colors)
 ggsave('stacked_capacity_all.pdf', width = 16, height = 9)
 
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
@@ -71,6 +98,20 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   guides(fill = guide_legend(ncol = 1))
 ggsave('proportion_capacity_all.pdf', width = 16, height = 9)
 
+cap_agg = cap_final[,.(capacity = sum(capacity)), , .(tech,year, color)]
 
+# Plot the aggregated data
+ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
+  geom_area(position = 'stack') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  scale_fill_manual(values = color_key)
+ggsave('stacked_capacity_agg.pdf', width = 16, height = 9)
 
+ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
+  geom_area(position = 'fill') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  scale_fill_manual(values = color_key)
+ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
 
