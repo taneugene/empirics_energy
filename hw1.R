@@ -2,6 +2,15 @@ library(tidyverse)
 library(data.table)
 library(readxl)
 
+# Directories are subfolders of data and output
+data_folder <-  "data/hw1"
+output_folder <- "output/hw1"
+# Create those folders if they don't exist
+dir.create(file.path(".", "data"), showWarnings = T)
+dir.create(file.path(".", "output"), showWarnings = T)
+dir.create(file.path(".", data_folder), showWarnings = T)
+dir.create(file.path(".", output_folder), showWarnings = T)
+
 download_file <- function(url){
   #' Function to download and unzip.
   #' hardcoded filename for the eia 860 data
@@ -9,7 +18,7 @@ download_file <- function(url){
   if (!file.exists(fname)){
     download.file(url, fname)
   }
-  # Unzip the eia 860 data only [hardcoded]
+  # Unzip the eia 860 data only [hardcoded, if zip then do this]
   if (str_detect(fname,'zip')){
     unzip(fname, exdir = data_folder)
     fname <- file.path(data_folder, "3_1_Generator_Y2019_Early_Release.xlsx")
@@ -18,17 +27,9 @@ download_file <- function(url){
 }
 
 readin <- function(fname, skip=2){
-  #' Function to read in an excel file as a dataframe
+  #' Function to read in an excel file as data.table
   as.data.table(read_excel(fname, skip = skip))
 }
-
-
-
-# Make a directory called data
-data_folder <-  "data/hw1"
-output_folder <- 'output/hw1'
-dir.create(file.path(".", data_folder), showWarnings = T)
-dir.create(file.path(".", output_folder), showWarnings = T)
 
 # Download data
 urls <- c("https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip", # Raw EIA860 data. nonexhaustive, but seems includes all operating capacity since data started being collected
