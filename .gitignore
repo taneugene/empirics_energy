@@ -1,3 +1,9 @@
+# Ignore apple/google_drive binaries
+.DS_Store
+*/.DS_Store
+*/Icon?
+Icon?
+
 # Ignore data
 data/
 output/
