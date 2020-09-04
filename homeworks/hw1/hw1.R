@@ -3,11 +3,9 @@ library(data.table)
 library(readxl)
 
 # Directories are subfolders of data and output
-data_folder <-  "data/hw1"
-output_folder <- "output/hw1"
+data_folder <-  "data"
+output_folder <- "output"
 # Create those folders if they don't exist
-dir.create(file.path(".", "data"), showWarnings = T)
-dir.create(file.path(".", "output"), showWarnings = T)
 dir.create(file.path(".", data_folder), showWarnings = T)
 dir.create(file.path(".", output_folder), showWarnings = T)
 
