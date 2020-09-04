@@ -12,7 +12,7 @@ download_file <- function(url){
   # Unzip the eia 860 data only [hardcoded]
   if (str_detect(fname,'zip')){
     unzip(fname, exdir = data_folder)
-    fname <- "data/3_1_Generator_Y2019_Early_Release.xlsx"
+    fname <- file.path(data_folder, "3_1_Generator_Y2019_Early_Release.xlsx")
   }
   return(fname)
 }
@@ -25,8 +25,10 @@ readin <- function(fname, skip=2){
 
 
 # Make a directory called data
-data_folder <-  "data"
+data_folder <-  "data/hw1"
+output_folder <- 'output/hw1'
 dir.create(file.path(".", data_folder), showWarnings = T)
+dir.create(file.path(".", output_folder), showWarnings = T)
 
 # Download data
 urls <- c("https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip", # Raw EIA860 data. nonexhaustive, but seems includes all operating capacity since data started being collected
@@ -131,7 +133,7 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   ylab("Nameplate Capacity (MW)") +
   ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
   # scale_fill_manual(values = colors)
-ggsave('stacked_capacity_all.pdf', width = 16, height = 9)
+ggsave(file.path(output_folder, 'stacked_capacity_all.pdf'), width = 16, height = 9)
 
 # Unaggregated Technology stacked area chart as a proportion of total capacity
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
@@ -141,7 +143,7 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   ylab("Nameplate Capacity (% of total)") +
   ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
   # scale_fill_manual(values = colors) +
-ggsave('proportion_capacity_all.pdf', width = 16, height = 9)
+ggsave(file.path(output_folder, 'proportion_capacity_all.pdf'), width = 16, height = 9)
 
 # Aggregated Technology - color codedd
 ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
@@ -151,7 +153,7 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   ylab("Nameplate Capacity (MW)") +
   ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") +
   scale_fill_manual(values = color_key)
-ggsave('stacked_capacity_agg.pdf', width = 16, height = 9)
+ggsave(file.path(output_folder, 'stacked_capacity_agg.pdf'), width = 16, height = 9)
 
 # Aggregated Technology as % - color coded
 ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
@@ -161,7 +163,7 @@ ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
   scale_fill_manual(values = color_key) +
   ylab("Nameplate Capacity (% of total)") +
   ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
-ggsave('proportion_capacity_agg.pdf', width = 16, height = 9)
+ggsave(file.path(output_folder, 'proportion_capacity_agg.pdf'), width = 16, height = 9)
 
 ##################
 # Emissions by year
@@ -195,7 +197,7 @@ ggplot(em, aes(x= year, y = Value, fill = Description))+
   ggtitle("United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
   ylab("Million Metric Tons of CO2") +
   scale_fill_manual(values = colors_co2)
-ggsave('emissions.pdf', width = 16, height = 9)
+ggsave(file.path(output_folder, 'emissions.pdf'), width = 16, height = 9)
 
 #################
 # Water consumption
@@ -232,13 +234,13 @@ ggplot(h2o_summary, aes(x = Year, y = withdrawals, fill = `Generator Primary Tec
   geom_area(position = 'stack') +
   ylab('Water Withdrawal Volume (Million Gallons)')  +
   ggtitle('Water withdrawal volume (Million Gallons)', subtitle = 'source: EIA Thermoelectric Cooling data')
-ggsave('water_withdrawal.pdf')
+ggsave(file.path(output_folder, 'water_withdrawal.pdf'))
 
 # Plot water consumption over time by technology
 ggplot(h2o_summary, aes(x = Year, y = consumption, fill = `Generator Primary Technology`)) +
   geom_area(position = 'stack') +
   ylab('Water Consumption Volume (Million Gallons)')  +
   ggtitle('Water Consumption volume (Million Gallons)', subtitle = 'source: EIA Thermoelectric Cooling data')
-ggsave('water_consumption.pdf')
+ggsave(file.path(output_folder, 'water_consumption.pdf'))
 
 
