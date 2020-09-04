@@ -23,7 +23,7 @@
 \begin{flushleft}
 Columbia University SIPA	
 
-Fall 2019
+Fall 2020
 
 \end{flushleft}
 
@@ -31,7 +31,7 @@ Fall 2019
 \begin{center}
 \textbf{Empirical Analysis of Energy Markets - U6616}
 
-Empirical Exercise I
+Empirical Exercise I - Data Exploration
 
 \end{center}
 
@@ -39,29 +39,39 @@ Empirical Exercise I
 Prof. Ignacia Mercadal	
 \end{flushright}
 
-This problem set is due on \textbf{September 26th at the beginning of the class}. Students are allowed to discuss with others, but each student must submit his or her own solution. Please submit the homework as an R notebook (if there are data files, they put all the files in a zip file). The code must run without errors. If there are errors, it will cost you 10 points and you will be given 24 hours to correct it, after which you will have to indicate clearly where was the error.
- 
+This problem set is due on \textbf{October 2}. I strongly recommend to start working on the homework early. I would suggest to plan on completing the first two parts by September 20. You can work in pairs and submit a common solution. Please submit the homework as an R markdown file (if there are data files, they put all the files in a zip file). The code must run without errors. To make this easier, set the working directory at the beginning so it can be easily changed by someone else running the code. 
+
+The purpose of this dataset is to analyze how the capacity of different fuels used to generate electricity in the United States has changed over time. We will also look at how emissions of different pollutants have changed and think about potential links between the two.
  
 \begin{enumerate}
-	
-	\item Go to the energy dataset provided by S\&P Global available \href{https://platform.mi.spglobal.com/web/client?auth=inherit#news/home}{here}.\footnote{If you don't have access using your Columbia email, send an email to the professor.} Go to Power/Generation Supply Curve and download data for an ISO of your choice for 2 years.
-	\item Start by describing the data. For this, build graphs or tables that convey the following information, separately for each year:
-		\begin{enumerate}
-		\item 	What is the fuel composition of this market according to capacity (i.e. how much capacity for each fuel)? And in terms of net generation? Why are they different or similar?\footnote{Net generation is the amount of energy produced by a power plant, net of the energy used to produce. Basically, the amount of energy that comes out of the plant. NCapacity is the maximum amount of energy  that a plant can produce in a given hour. For this reason, net generation is measured in MWh over a certain period and capacity in MW.}
-		\item How high is the share of environmental costs in the variable cost? How does this vary by fuel? 
-		\item How much does each fuel contribute to $NO_x$, $SO_2$, and $CO_2$ emissions?
-		\item How is the share of fixed vs. variable cost in the total cost by fuel?
-		\item Do these answers vary by year?
-		\item How do operating vs. retired plants differ, if they do?
-		\end{enumerate}
+\item Start at the \href{https://www.eia.gov/electricity/annual/}{EIA Electric Power Annual}. 
+	\begin{enumerate}
+	\item First download Tables 4.2.A and 4.2.B., which contain capacity by source over time. 
+	\item Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+	\item What is capacity? Make sure you understand the difference between capacity and generation.
+	\item Plot total capacity over time. How has this changed?
+	\item Plot the share of capacity from the different sources over time. How has this changed?
+	\end{enumerate}
 
-	\item Organize the data and plot the supply curve using a different color for each fuel (reproduce the plot you can build online). Use a loop to create a separate plot for each year.
-	\item Suppose we want to know if the dispatch of power plants is efficient, i.e. if cheaper plants are dispatched first. Do cheaper power plants produce more? To check this, do the following:
-		\begin{enumerate}
-		\item Run an OLS regression of net generation on cost. What cost is the most relevant here? Try total cost and variable cost and argue why/how results vary with the cost definition. Briefly discuss.
-		\item Now control for capacity, how do results change?
-		\item What else could you be missing that may lead to bias? Can you control for it?	Add some control that you consider relevant and discuss how it changes the results. 
-		\end{enumerate}
+	\item Now we will obtain data on emissions over time. For this, follow \href{https://www.eia.gov/electricity/data.php#elecenv}{this link} to the EIA data on electricity and download the data set on carbon emissions from energy consumption in the electric power sector (11.6).
+	\begin{enumerate}
+	\item Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+	\item Plot total emissions over time. How have they changed?
+	\item Plot the share of emissions from the different sources over time. How has this changed? How do you relate this to what you observed in the previous question?
+	\end{enumerate}
+\item Since the previous dataset only had capacity for 10 years, the next step is to download data from \href{https://www.eia.gov/electricity/data/eia860/}{EIA Form 860} to build capacity for a period as long as the one for emissions. 
+	\begin{enumerate}
+	\item  Follow the steps covered during recitation to build the total capacity of source for each year.
+	\item Plot total capacity over time. How has this changed?
+	\item Plot the share of capacity from the different sources over time. How has this changed?
+	\item Add total carbon emissions to the graph. Is there any correlation?
+	\end{enumerate}
+	\item Suppose you are interested in the causal effect of coal capacity on carbon emissions and you want to use the dataset you just build to estimate it.
+		\begin{itemize}
+		\item Run a regression of carbon emissions on coal capacity and present your results using the stargazer package. Use robust standard errors.
+		\item 	Does the previous regression capture the causal effect of coal capacity on carbon emissions? Why? If there is bias, do you expected to go in a particular direction? Explain.
+		\item Are there any controls you could add to correct this problem? Explain. You don't have to run more regressions, just to discuss how you would do it assuming you had access to typically available data.
+		\end{itemize}
 
 \end{enumerate}
 
