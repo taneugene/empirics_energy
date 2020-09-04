@@ -29,4 +29,5 @@ Data science as a field generally evolved out a place where you have large-n, in
 Depending on time and your interest, we may cover some other relatively simple non-R programming stuff. These might help you get a job, but apart from the first they are supplemental to the course. 
     1. R Markdown - used to present your work nicely, needed for problem sets.
     1. git and GitHub - work on code collaboratively, near-essential for working professionally in teams.
+    1. Regular expressions - parse strings, built into R but technically a separate 'language'
     1. command line tools - use your computer more effectively 
