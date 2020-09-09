@@ -31,7 +31,7 @@ DataCamp obviously isn't specific to energy, so I'll supplement R programming sk
 1. **Econometrics and Economic Applications**. 
 Data science as a field generally evolved out a place where you have large-n, independent and identically distributed (iid) data. Economics isn't like that - we often have small datasets, conditional dependence, serial correlation... Also, the big goal of this class (and econometrics more broadly) is normally establishing causality, whereas the goal of machine learning is prediction. All of this means is that your toolbox is slightly different than an aspiring data scientists', and DataCamp doesn't have content on those parts of the toolbox we'll develop. As we cover those tools during lecture, I'll supplement that with material that will teach you how to program those in R. 
 1. **Data Science skills that are not R**. 
-Time-permitting, and depending on your interest, we may cover some other relatively simple non-R programming stuff. These might help you get a job, but apart from the first they are supplemental to the course. 
+Time-permitting, and depending on your interest, we may cover some other relatively simple non-R programming stuff. These might help you get a job, but apart from the first, they are supplemental to the course. 
     1. R Markdown - used to present your work nicely, needed for problem sets.
     1. git and GitHub - work on code collaboratively, near-essential for working professionally in teams.
     1. Regular expressions - parse strings, built into R but technically a separate 'language'
