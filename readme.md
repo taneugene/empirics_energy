@@ -21,7 +21,7 @@ If you have problems with your homework or have questions regarding R, create an
 
 Install R [here](https://www.r-project.org/) and RStudio Desktop [here](https://rstudio.com/products/rstudio/download/). There are some really useful [cheatsheets](https://rstudio.com/resources/cheatsheets/#contributed-cheatsheets) available for quick reference. In particular for this course you may find the the [Base R](http://github.com/rstudio/cheatsheets/raw/master/base-r.pdf), [Advanced R](https://www.rstudio.com/wp-content/uploads/2016/02/advancedR.pdf), [RMarkdown](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf), [data.table](https://github.com/rstudio/cheatsheets/raw/master/datatable.pdf), and [RStudio IDE](https://github.com/rstudio/cheatsheets/raw/master/rstudio-ide.pdf) cheatsheets useful.
 
-## TA Sessions - Content Overview
+## Content Overview
 DataCamp is great at teaching you how to program in R, in particular the commands, data structures, and libraries you'll use to become proficient at data analysis.  I'll complement DataCamp in several ways.  
 
 1. **How to approach programming problems**.   
