@@ -15,7 +15,7 @@ Since the class assumes no previous knowledge, learning will be based on a combi
 
 This GitHub Repository is going to be where I put all the material for recitations and empirical exercises (including answer keys). Most material should be posted as a R Markdown file, which means that during TA sessions, you should be able to take the files and run them on your local computers during the session (I highly encourage this!). If questions come up, I'll also post answers to them here. 
 
-## TA sessions - pedagogical note.
+## TA Sessions - Content Overview
 DataCamp is great at teaching you how to program in R, in particular the commands, data structures, and libraries you'll use to become proficient at data analysis.  I'll complement DataCamp in several ways.  
 
 1. **How to approach programming problems**.   
@@ -24,7 +24,7 @@ Because DataCamp hand-holds you through the analysis, attacking a bigger problem
 DataCamp runs R direct from their servers, what if you're working locally? How do format your code so that other people can run and use it? Most R Programmers use RStudio, which is a beautiful GUI for R. I'll walk through how to use it and why it's useful
 1. **Energy Applications**. 
 DataCamp obviously isn't specific to energy, so I'll supplement stuff you should have covered there sometimes with energy related stuff. Some ideas I haven't yet executed on are that there are some charts are used often in energy like Sankey Diagrams that don't often apply to other fields, and replicating papers that you don't have to do presentations/empirical exercises on.
-1. **Econometric techniques**. 
+1. **Econometrics and Economic Applications**. 
 Data science as a field generally evolved out a place where you have large-n, independent and identically distributed (iid) data. Economics isn't like that - we often have small datasets, conditional dependence, serial correlation... Also. the big goal of this class (and econometrics more broadly) is normally establishing causality, whereas the goal of machine learning is prediction. All of this means is that your toolbox is slightly different than an aspiring data scientists', and DataCamp doesn't have content on those parts of the toolbox we'll develop. As we cover those tools during lecture, I'll supplement that with material that will teach you how to program those in R. 
 1. **Data Science skills that are not R**. 
 Time-permitting, and depending on your interest, we may cover some other relatively simple non-R programming stuff. These might help you get a job, but apart from the first they are supplemental to the course. 
