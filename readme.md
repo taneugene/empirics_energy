@@ -3,15 +3,17 @@ Columbia University School of International and Public Affairs
 INAF U6616  
 Quant III
 
-TA recitation material
+TA recitation material  
 Eugene Tan
 
 ## How TA sessions fit into the course
 One of the goals of the class is to learn to analyze real datasets and replicate empirical papers data using R; and you're expected to become familiar with empirical analysis in R by the end of the course.  This is the main goal of the TA sessions, and generally speaking, you should come to me if you have questions regarding R or programming related rather than Ignacia.
 
-We don't assume previous knowledge or any programming experience, but we do assume that you've taken quant I-II I and have a general sense of the thought process and general concepts of manipulating data. 
+We don't assume previous knowledge or any programming experience, but we do assume that you've taken quant I-II and have a general sense of the thought process and general concepts of manipulating and analyzing data. 
 
-Since the class assumes no previous knowledge, learning will be based on a combination of DataCamp (ungraded but required homeworks, 0%), empirical exercises (graded homeworks, 35%), in addition to the recitations. You can access DataCamp through the courseworks site.
+Learning R for causal effects will be based on a combination of DataCamp (ungraded but required homeworks, 0%), empirical exercises (graded homeworks, 35%), in addition to the recitations. You can access DataCamp through the courseworks site. The first deadline for these is September 19th, so I recommend looking at it sooner rather than later.
+
+## Logistics and Github
 
 This GitHub Repository is going to be where I put all the material for recitations and empirical exercises (including answer keys). Most material should be posted as a R Markdown file, which means that during TA sessions, you should be able to take the files and run them on your local computers during the session (I highly encourage this!). If questions come up, I'll also post answers to them here. 
 
