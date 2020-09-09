@@ -23,7 +23,7 @@ If you have problems with your homework or have questions regarding R, create an
 DataCamp is great at teaching you how to program in R, in particular the commands, data structures, and libraries you'll use to become proficient at data analysis.  I'll complement DataCamp in several ways.  
 
 1. **How to approach programming problems**.   
-Because DataCamp hand-holds you through the analysis, attacking a bigger problem that doesn't do so might be quite jarring and intimidating. I'll try to develop some processes about how to thinking about breaking down programming and analytical problems, as well as how to develop your google skills. I'll also add some basics of computer science so that you'll understand what your machine is doing behind the scenes, because [I believe that] understanding more CS makes you into a better programmer.
+Because DataCamp hand-holds you through the analysis, attacking a bigger problem that doesn't do so might be quite jarring and intimidating. I'll try to develop some processes about how to think about breaking down programming and analytical problems, as well as how to develop your google skills. I'll also add some basics of computer science so that you'll understand what your machine is doing behind the scenes, because [I believe that] understanding more CS makes you into a better programmer.
 1. **RStudio and presenting work**. 
 DataCamp runs R direct from their servers, what if you're working locally? How do format your code so that other people can run and use it? Most R Programmers use RStudio, which is a beautiful GUI for R. I'll walk through how to use it and why it's useful.
 1. **Energy Applications**. 
