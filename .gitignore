@@ -4,6 +4,12 @@
 */Icon?
 Icon?
 
+# Ignore courseworks folders
+Slides/
+Readings/
+R Cheatsheets/
+Empirical Exercises/
+
 # Ignore data
 data/
 output/
