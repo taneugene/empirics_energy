@@ -36,7 +36,7 @@ Goals:
 ## R onramp (1/2)
 |Week|Date |TA Session  |What you'll do at home |
 |---|---|---|---|
-|Week 1 |9/11| Programming and CS Basics | Intro and "Intermediate"" R  |
+|Week 1 |9/11| Programming and CS Basics | Intro and "Intermediate" R  |
 | || | Visualization with ggplot |
 | Week 2 |9/18| Programming and Analysis Strategy, Paradigms | data.table, Tidyverse, importing csvs |
 |||| Excel, readr, data.table imports|
@@ -114,11 +114,10 @@ All the content I produce will be on Github.
 
 Most machines are designed to do one thing.  For example, a fan is designed to blow air.  
 
-A computer is a machine:
+A computer is a machine that does two things: 
 
-
-> "A computer does two things: perform calculation & remember the results."  
-
+* perform calculation 
+* remember the results
 
 ## Performing Calculation - Arithmetic Operations
 * Arithmetic
@@ -152,7 +151,7 @@ Computers are dumb!
 * A program is a collection of interlinked processes.
 * Programming is just creating programs, which your computer is designed to run.
 
-## Remembering Results and Data Structures
+## Remembering Results: Data Structures
 * Do this in variables
 * Data structures encapsulate data at once
 * Different configurations of how computers store things in memory
