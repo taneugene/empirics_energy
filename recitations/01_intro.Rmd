@@ -104,7 +104,7 @@ All the content I produce will be on Github.
 * Tie each of these things to a concept in CS
   * Computers as machines
   * Data Structures
-  * Repitition
+  * Repetition
   * Abstraction
   * (maybe) Recursion
 * Go over these concepts
