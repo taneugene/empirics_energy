@@ -4,9 +4,27 @@
 */Icon?
 Icon?
 
+# Ignore courseworks folders
+Slides/
+Readings/
+R Cheatsheets/
+Empirical Exercises/
+
 # Ignore data
 data/
 output/
+
+# Ignore latex compile intermediate
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+
 
 # History files
 .Rhistory
@@ -48,3 +66,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+.Rproj.user
