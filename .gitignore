@@ -14,6 +14,18 @@ Empirical Exercises/
 data/
 output/
 
+# Ignore latex compile intermediate
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+
+
 # History files
 .Rhistory
 .Rapp.history
