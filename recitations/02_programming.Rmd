@@ -10,8 +10,9 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## Logistics
-* Please do the survey if you haven't yet!
+* Please do the survey if you haven't yet.
 * Questions for me?
+* Please interrupt me more if you don't understand!
 
 ## On Datacamp
 Intro to R:
@@ -90,6 +91,46 @@ ggplot2 intro, aesthetics, geometries
 
 ## Abstraction Diagram
 ![](../img/abstraction.jpg)
+## Programming Languages in translation
+
+* CPU machine code is the "native" language of the CPU
+* CPU machine code instructions are extremely simple
+* Hard to get much done with such simple instructions
+* Programming languages have "high level" features, like print
+* There is no single machine code instruction that prints
+* So how do programming languages work?
+* Programming languages work in translation to machine code
+* In Javascript, the print statement is translated to, say, 10 machine code instructions
+* These 10 instructions, when run, perform the print command 
+
+![](../img/software-translation.png)
+
+Source: [Stanford CS101](https://web.stanford.edu/class/cs101/software-2.html)
+
+## Abstraction in practice as a high-level programmer
+
+* You use variables for parameters to abstract away from doing things on a case-by-case basis
+* You use functions (e.g. regress(), download_file()) to abstract away from the details
+* Often we use libraries (other people's functions and processes) to simplify our work.
+  * Open source software
+    * Richard Stallman (1985) believed users should have the right to see and edit source code.
+    * Here is great software and you are free to use and change it
+    * If you add a great feature, contribute it back so others may use it 
+    
+## Open Source 
+
+* Software has many layers where you want something to work reliably
+* Open source provides
+  * free
+  * widely used, high quality
+  * maintained collectively
+  * provides no advantage vs. competitors
+Conclusion: for many niches, free + high-quality is an appealing tradeoff
+  * Proprietary software is not dead, but open source dominates many areas
+  * Ultimately we all benefit: avoid work duplication
+  * That's how your computer systems work today! 
+
+Source: [CS101 Stanford](https://web.stanford.edu/class/cs101/software-2.html)
 
 ## Increasing Abstraction 
 
@@ -100,7 +141,7 @@ ggplot2 intro, aesthetics, geometries
 * ...the criteria is....
 
 
-## Pseudocode
+## Building Algorithms - Pseudocode
 >  Pseudocode is the plain language description of the steps in an algorithm or another system. 
 
 * Intended for human reading!
@@ -128,7 +169,7 @@ ggplot2 intro, aesthetics, geometries
 # Else Return False
 ```
 
-## Pseudocode to real code
+## From Algorithms to Processes (pseudocode to real code)
 ```{r, echo = TRUE}
 # Assume that it's stored in a numeric vector of length 1
 # Convert to a character vector
