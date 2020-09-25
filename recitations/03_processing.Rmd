@@ -1,0 +1,335 @@
+---
+title: 'Recitation 3: Processing and Cleaning Data'
+author: "Eugene Tan (TA)"
+date: "9/25/2020"
+output:
+---
+
+# Today
+
+1. Homework Logistics
+1. R Markdown Files
+1. Data Analysis of EIA consumption data
+1. (Time-allowing) grid/electricity market primer
+
+## Homework Logistics
+* Please watch [Ignacia's video](https://columbia.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=5229d9d4-c45d-44d4-aa4b-ac3a012f8271) to understand what you should be getting out of presentations/papers
+* Just Focus on Empirical Exercise 1
+* Use datacamp to help you
+  1. "Manipulating Data with Data.Table" is the most important dc exercise, esp parts 1 and 2. 
+  1. "Intro to R" is a prerequisite to understand those
+  1. ggplot exercises (Intro, Aesthetics, Geometries) could help with the plotting, but I'm covering them exhaustively here
+
+* Readings/Presentations
+  * Ignacia posted guidelines to help you structure presentations
+  * Tell a story
+  * Last 15 minutes of recitation doing energy systems/economics concepts during recitation to help non-EE concentrators (half the class!), feel free to leave if you feel confident about it
+
+## R Markdown Notebook
+
+This is the format we expect you to submit your homeworks in, allowing you to interlace code and written answers.  
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r echo=TRUE}
+plot(cars)
+```
+
+
+### R Markdown commands
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+### Markdown
+
+Used on github and in Rmarkdown.
+
+```
+Plain text.
+End a line with two spaces to start a new paragraph.  
+*italics* and _italics_
+**bold** and __bold__
+superscript^2^
+~~strikethrough~~
+[link](www.rstudio.com)
+```
+Plain text.
+End a line with two spaces to start a new paragraph.  
+*italics* and _italics_
+**bold** and __bold__
+superscript^2^
+~~strikethrough~~
+[cheatsheet 1](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
+[cheatsheet 2](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiwzM7csoPsAhUhTt8KHbgbDR8QFjAAegQICBAB&url=https%3A%2F%2Frstudio.com%2Fwp-content%2Fuploads%2F2015%2F02%2Frmarkdown-cheatsheet.pdf&usg=AOvVaw2JPoZecb8BAHRdCxcP3wDE)
+```
+# Header 1
+
+## Header 2
+
+### Header 3
+
+#### Header 4
+
+##### Header 5
+
+###### Header 6
+```
+# Header 1
+
+## Header 2
+
+### Header 3
+
+#### Header 4
+
+##### Header 5
+
+###### Header 6
+```
+endash: --
+emdash: ---
+ellipsis: ...
+inline equation: $A = \pi*r^{2}$
+image: ![](../img/Rlogo.png)
+horizontal rule (or slide break):
+
+***
+```
+
+endash: --
+emdash: ---
+ellipsis: ...
+inline equation: $A = \pi*r^{2}$
+image: ![](../img/Rlogo.png)
+horizontal rule (or slide break):
+
+***
+
+```
+> block quote
+
+* unordered list
+* item 2
+    + sub-item 1
+    + sub-item 2
+1. ordered list
+2. item 2
+    + sub-item 1
+    + sub-item 2
+    
+Table Header  | Second Header
+------------- | -------------
+Table Cell    | Cell 2
+Cell 3        | Cell 4
+```
+> block quote
+
+* unordered list
+* item 2 q
+    + sub-item 1
+    + sub-item 2
+1. ordered list
+2. item 2
+    + sub-item 1
+    + sub-item 2
+    
+Table Header  | Second Header
+------------- | -------------
+Table Cell    | Cell 2
+Cell 3        | Cell 4
+
+### Use Markdown to submit your homework!
+
+* Write sentences to answer the questions in normal text
+* Show your code and output, like in this .Rmd file. 
+* You can also make slides in Rmarkdown, you can see the source code on [github](https://github.com/taneugene/empirics_energy/tree/master/recitations)
+
+### Example - Demand side
+* Rather similar process
+* Data from Monthly Energy Review - "Energy consumption by sector"
+  * Create a stacked area chart of total energy consumption by demand sector with a monthly frequency
+  * Create a stacked bar chart of primary energy consumption by demand sector with a yearly frequency
+* Show the process from end to end
+
+#### Download the data (optional)
+
+```{r echo=TRUE}
+# Imports
+library(tidyverse) 
+library(data.table)
+library(readxl)
+
+# Choose the excel since a lot of the datasets need excel
+url <- "https://www.eia.gov/totalenergy/data/browser/xls.php?tbl=T02.01&freq=m"
+data_folder <- "data"
+
+# Create a directory to store data
+dir.create(data_folder, showWarnings = T)
+
+# Create the path I want to save it to
+file <- file.path(data_folder, basename(url))
+
+# Download the file
+download.file(url, file)
+```
+#### Importing the dataset
+
+* Hit 'Import dataset' on the top right hand side
+* Be as specific as you need to get the data that you want.
+* What are data preprocessing steps I'll need?
+
+```{r echo=TRUE}
+df <- read_excel("data/xls.php?tbl=T02.01&freq=m", skip = 10)
+# View the table
+df
+# Check the structure - a dataframe is a list of vectors
+str(df)
+```
+## Pseudocode (a reminder)
+* Tell yourself what you intend to do
+* Code is more often read than written, so make it communicable
+```{r echo=TRUE}
+# Convert to data.table
+# Remove the row with units
+# Convert everything except dates to a numeric datatype
+# Rename columns to make them easier to handle in data.table
+```
+
+## Rename Columns
+
+Rename columns to make them easier to handle in data.table
+```{r echo=TRUE}
+# Get the current names
+names(df)
+# Store corresponding names in a vector
+columns <- c('month', 'res_prim','res_tot',
+  'com_prim','com_tot','ind_prim','ind_tot',
+  'trans_prim','trans_tot','power_prim',
+  'balancing','total')
+names(columns) <- names(df)
+# Set new names
+setnames(df,columns)
+```
+
+## Some basic cleaning
+```{r echo=TRUE}
+# Convert to data.table
+dt <- as.data.table(df)
+# Remove the row with units dt[i,j,by]
+dt <- dt[!1]
+# What are the datatypes?
+str(dt)
+# Get the column names we want to convert to numeric datatype
+num_cols <- columns[2:length(columns)]
+num_cols
+
+# Convert to numeric datatype
+# One-liner 
+dt[, (num_cols):= lapply(.SD, as.numeric), .SDcols = num_cols]
+# Manual way
+dt[, res_prim := as.numeric(res_prim)]
+dt[, res_tot  := as.numeric(res_tot )]
+dt[, com_prim := as.numeric(com_prim)]
+dt[, com_tot  := as.numeric(com_tot )]
+dt[, ind_prim := as.numeric(ind_prim)]
+dt[, ind_tot  := as.numeric(ind_tot )]
+dt[, trans_prim := as.numeric(trans_prim)]
+dt[, trans_tot  := as.numeric(trans_tot )]
+dt[, power_prim := as.numeric(power_prim)]
+dt[, balancing  := as.numeric(balancing)]
+dt[, total  := as.numeric(total)]
+```
+
+## Filter columns
+ I want a graph for primary energy and total energy separately
+```{r echo=TRUE}
+
+# Manually filter the names I want
+columns_prim <- c("month","res_prim","com_prim","ind_prim","trans_prim","power_prim")
+# Regular Expressions way
+cols <- names(dt)
+# Search for the columns with month or prim
+columns_prim <- grepl('month|prim',cols)
+columns_prim
+# Use the boolean vector to filter your column vector
+columns_prim <- cols[columns_prim]
+columns_prim
+# Same process, only I'm searching for columns with month or ENDING with tot
+columns_tot <- grepl('month|tot$',cols)
+columns_tot <- cols[columns_tot]
+# make two separate dts
+dt_prim <- dt[,..columns_prim]
+dt_tot <- dt[,..columns_tot]
+```
+
+## Unstack or Melt data
+
+```{r echo=TRUE}
+# Melt it
+dt_prim
+dt_prim <- melt(dt_prim,'month',columns_prim[2:length(columns_prim)])
+dt_prim
+dt_tot
+dt_tot <- melt(dt_tot,'month',columns_tot[2:length(columns_tot)])
+dt_tot
+```
+
+## Plot two types of charts
+
+```{r echo=TRUE}
+# Setup the chart
+ggplot(dt_tot, aes(x = month, y= value, fill = variable)) +
+  geom_area(position = 'stack') + # Make a stacked area chart
+  ggtitle("Total Energy Consumption by Sector") + # Title it
+  ylab("Consumption (Trillion btu)") + # label axes
+  xlab("Date") + # label axes
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1))
+```
+## Plot two types of charts
+
+```{r echo=TRUE}
+# Groupby variable and year and sum over the months
+# Create a variable year by running the function year over the variable I have called month
+dt_prim[,year:=year(month)]
+# Set the 'key' or 'index' of the dataframe as variable-year
+setkey(dt_prim,variable,year)
+dt_prim
+# Now I can easily groupby the key and do operations on each group
+yearly_primary <- dt_prim[,list(consumption_prim = sum(value)),key(dt_prim)]
+yearly_primary
+
+# Setup the chart
+ggplot(yearly_primary, aes(x = year, y= consumption_prim, fill = variable)) +
+  geom_bar(position = 'stack', stat = 'identity') + # Make a stacked bar chart
+  ggtitle("Primary Energy Consumption by Sector") + # Title it
+  ylab("Consumption (Trillion btu)") + # label axes
+  xlab("Date") + # label axes
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1))
+```
+
+## Joins 
+You need a unique key that matches both dataframes
+* Creating this key might take some work! 
+* e.g state_company_id_plant_id by concatenating
+I'm going to stack the total energy data and join it to yearly_primary
+```{r echo=TRUE}
+
+dt_tot[,year := year(month)]
+setkey(dt_tot,variable,year)
+yearly_tot <- dt_tot[,list(consumption_tot = sum(value)),key(dt_prim)]
+yearly_tot <- dcast(yearly_tot, year ~ variable)
+yearly_prim <- dcast(yearly_primary, year ~ variable)
+
+# Yearly consumption by merging the two 
+merge(yearly_tot,yearly_prim) 
+
+
+```
