@@ -29,11 +29,13 @@ library(tidyverse)
 ## Download and unzip file
 
 ```{r echo = TRUE}
-url <- "https://www.eia.gov/electricity/data/eia860/xls/eia8602019ER.zip"
+url <- "https://www.eia.gov/electricity/data/eia860/xls/eia8602019.zip"
 
 data_folder <-  "data"
 dir.create(file.path(".", data_folder), showWarnings = T)
 fname <- file.path(data_folder, basename(url))
+
+fname
 if (!file.exists(fname)){
   download.file(url, fname)
 }
@@ -101,6 +103,7 @@ str(df)
 num_cols <-  colnames(df)[grep("MW|Plant Code|Year|Month|Factor|Buoys", colnames(df), ignore.case=T)]
 # Trick I showed last class to apply something over a bunch of columns. See the alternative there if you don't understand this
 df[, (num_cols):= lapply(.SD, as.numeric), .SDcols = num_cols]
+df[,`Nameplate Capacity (MW)`:=as.numeric(`Nameplate Capacity (MW)`)]
 ```
 
 ## Change the column names for easy access
@@ -145,7 +148,7 @@ setkey(cap, year, Technology)
 
 ## now merge in the additions and subtractions
 cap <-  merge(cap,merge(add, subtract, all = TRUE),all.x = TRUE)
-head(cap)
+head(cap,50)
 ```
 
 ```{r}
@@ -155,6 +158,7 @@ cap[is.na(capacity_subtractions), capacity_subtractions:= 0]
 # Calculate the net capacity change and the cumulative build of generating capacity
 cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractions), by = key(cap)]
 cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
+cap_final
 ```
 
 ```{r}
