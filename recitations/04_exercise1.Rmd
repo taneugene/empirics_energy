@@ -19,7 +19,7 @@ output:
 
 ## Imports
 
-```{r}
+```{r echo = TRUE}
 library(data.table)
 library(readxl)
 library(tidyverse)
@@ -29,28 +29,41 @@ library(tidyverse)
 ## Download and unzip file
 
 ```{r echo = TRUE}
+
+# This dataset is no longer the early release version!
 url <- "https://www.eia.gov/electricity/data/eia860/xls/eia8602019.zip"
 
+# I want a variable for the name of my data folder
 data_folder <-  "data"
+# Create the folde if it doesn't exist
 dir.create(file.path(".", data_folder), showWarnings = T)
+# Get the path of the file when it is stored on disk
 fname <- file.path(data_folder, basename(url))
-
 fname
+# If the file doesn't exist already, download from the URL (the web) to the path (your computer's folder called data, relative to your working directory)
 if (!file.exists(fname)){
   download.file(url, fname)
 }
+# Unzip the folder 
 unzip(fname, exdir = data_folder)
 ```
 
 ## Look and examine the data
 ![](../img/eia860.png)
 
-* What is the diffence between 1, 2 and 3?
-* What is the difference between 2 and 3?
+* What is the difference between 1, 2 and 3? 
+
+> the relevant data is in 3
+
+* What is the difference between 3.1 and 3.2...
+
+> "Additional Details" are in 3_2+, these we don't need because the capacity, technology, and the operating and retirement years are in 3_1.
+
 * Look at the data we want, is it sufficient to answer the question?
+
 > ...build capacity for a period as long as the one for emissions
 
-## Assumption and Algorithm
+## Assumption
 
 We don't need any more data. Assume:
 
@@ -58,41 +71,73 @@ We don't need any more data. Assume:
  * All power plants in 'Retired and Cancelled' were 'active' from "Operating Year" until "Retirement Year", and that this dataset is exhaustive.
  * Power plant capacity in any given year is the total capacity of 'active' plants. 
  
+ 
 ## 2 methods
 * Have a column with active status...
 * Keep a running tally for each fuel and year. 
 * What is the minimum dataset we need for each method?
+
+## High-level algorithm for the running tally method
+
+My ideal dataset has a cumulative capacity for each technology-year pair. 
+
+1. For all those power plants are operable, we assume they are active up until the current year, so they never go offline. 
+1. For all those power plants in 'Retired and Cancelled', we assume they are active between their operating and retirement years; if there's no data, we just assume they are cancelled and never operated.  
+1. Get the sum of Power Plant Capacity that came online in each year from the Operating Year column - 'additions' - by technology.
+1. Get the sum of Power Plant Capacity that was retired/came offline from the Retirement Year column - 'subtractions' - in each year by technology.
+1. The 'net capacity change' for each technology-year pair is additions less subtractions.
+1. Running a cumulative sum over the years by technology will give me the total capacity by technology in each year. 
   
 ## Join vs Concatenate?
 
 * Concatenating (rbindlist) is stacking two datasets
 * Joining (merge, join) is putting two datsets next to each other 
 * Which do we want to do here?
-* Which columns are important to do correctly?
-```{r}
 
-# Read in Data
-fname <- file.path(data_folder, "3_1_Generator_Y2019_Early_Release.xlsx")
-operable <-  as.data.table(read_excel(fname, sheet = "Operable", skip = 2, na = 'NA'))
+> Concatenate
+
+* Which columns are important to do correctly?
+
+> The minimum dataset has Operating Year, Retirement Year, Nameplate Capacity (MW), and Technology. 
+
+```{r echo = TRUE}
+
+# Read in the data after unzipping
+fname <- file.path(data_folder, "3_1_Generator_Y2019.xlsx")
+
+# Import the excel sheet using Import Dataset in RStudio.
+operable <-  as.data.table(read_excel(fname, sheet = "Operable", skip = 1, na = 'NA'))
 # Look at structure
 str(operable)
+# View the table
+head(operable)
 
-# Count how many nas
-sum(is.na(operable$`Operating Year`))
-operable[,sum(is.na(`Operating Year`))]
-operable[is.na(`Operating Year`),]
+# Count how many nas there are
+sum(is.na(operable$`Operating Year`)) # base r version
+operable[,sum(is.na(`Operating Year`))] # data.table version, both work, this is better
 
-# 2nd Sheet
-retired <-  as.data.table(read_excel(fname, sheet = "Retired and Canceled", skip = 2, na = 'NA'))
+# View the rows for which there  there's no operating year. 
+operable[is.na(`Operating Year`),] 
+
+# Get the second sheet
+retired <-  as.data.table(read_excel(fname, sheet = "Retired and Canceled", skip = 1, na = 'NA'))
 str(retired)
-retired[,sum(is.na(`Operating Year`))]
-retired[,sum(is.na(`Retirement Year`))]
+# Count how many nas there are using the data table method
+retired[,sum(is.na(`Operating Year`))] # These are all cancelled plants
+retired[,sum(is.na(`Retirement Year`))] # there are 2 retired plants that don't have a retirement year, why? You could assume these retired in 2019, but I don't in this sketch.
 
 # Try binding
+
+# Look up ?rbindlist if you haven't already
+# The first parameter is list
+# use.names makes you match columns based on their names instead of column order
+# Fill is to fill 'retirement Year' in the operable sheet with NAs.
+# idcol provides a column in df (for dataframe) with the list-position of the dataset it came from.  i.e. if you call df$.id it'll show 1s and 2s. 1s mean it comes from operable, and 2s mean that it came from retired.
 df <-  rbindlist(list(operable, retired), use.names = T, fill =  T, idcol = T)
+# Same checks for nulls, note how these numbers change
 df[,sum(is.na(`Operating Year`))]
-df[,sum(is.na(`Retirement Year`))]
-df<- df[!is.na(`Operating Year`)]
+df[,sum(is.na(`Retirement Year`))] # Many nulls because none of the operable plants have been retired yet!
+df<- df[!is.na(`Operating Year`)] # filter only those with an operating year
 str(df)
 ```
 
@@ -103,12 +148,16 @@ str(df)
 num_cols <-  colnames(df)[grep("MW|Plant Code|Year|Month|Factor|Buoys", colnames(df), ignore.case=T)]
 # Trick I showed last class to apply something over a bunch of columns. See the alternative there if you don't understand this
 df[, (num_cols):= lapply(.SD, as.numeric), .SDcols = num_cols]
+# The above 2 lines are *VERY FANCY*, I explained them in recitation 3. 
+# You can also convert the columns one by one using code like this, which may be easier to understand
 df[,`Nameplate Capacity (MW)`:=as.numeric(`Nameplate Capacity (MW)`)]
 ```
 
 ## Change the column names for easy access
-```{r}
+```{r echo = TRUE}
+# Print the columns of df so I know what I am looking for
 colnames(df)
+# Rename these for easy access
 df[,upyear := `Operating Year`]
 df[,downyear := `Retirement Year`]
 df[,capacity :=`Nameplate Capacity (MW)`]
@@ -116,59 +165,88 @@ df[,capacity :=`Nameplate Capacity (MW)`]
 
 
 ## Get a sum of new and retiring capacity year on year (new variable) by technology
-```{r}
+```{r echo = TRUE}
+# Set a 'key' for df
+# In response to Gabriel's question, I don't explicitly actually use this line
+# But I will set keys later that I do use!
 setkey(df, upyear, Technology)
+# View the key - this is just a list of columns for easy access.
+key(df)
+# One-line data.table query. by parameter:
+# i = choose only the rows which have we have a year for which they come online
+# j = create a column called year which is equal to upyear (this is to join with subtract later), and a column called 'capacity additions' which is the sum of capacities.
+# by = I don't want to sum across the whole dataset for capacities, I only want to do so in groups, which is the operating year-technology pair.  
 add <- df[!is.na(upyear),.(year = upyear,capacity_additions = sum(capacity,na.rm = T)), by = .(upyear, Technology)]
+
+# Same code, I could have done the same thing using the key
+add <- df[!is.na(upyear),.(year = upyear,capacity_additions = sum(capacity,na.rm = T)), by = key(df)]
+
+# Same as making add, only I'm grouping the power plants by the years they come offline rather than online. 
 subtract <-  df[!is.na(downyear),.(year = downyear,capacity_subtractions = sum(capacity,na.rm = T)), by = .(downyear, Technology)]
+# view em
 add
 subtract
 ```
 
 # Join the additions and subtractions
-```{r}
-## Set keys
+```{r echo = TRUE}
+
+## Use expand_grid to make sure that there's a key for every year
+## (this is easy to overlook until you plot)
+## The purpose of this is so you don't have NAs in your dataset - I want solar in 1893 to be 0, not NA, but this wouldn't be given by the add or subtract data.tables. 
+# check ?expand_grid
+# This is called an 'index' or 'key'
+cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
+## Check out what this looks like
+head(cap)
+tail(cap)
+
+
+
+# The purpose of the key is so that things can join later. Merges and Joins in data,table require that keys are the same so it knows which rows correspond to which other rows in two different datasets. 
+
+## Set keys - note that it's year-Technology now so that the two tables match, instead of operating_year-technology and retirement_year-technology pairs. 
 setkey(add, year, Technology)
 setkey(subtract, year, Technology)
-
-## Use expand_grid to make sure that there's a key for every year
-## (this is easy to overlook until you plot)
-cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
+# Set the key to be the same as (capacity) additions and subtractions above
 setkey(cap, year, Technology)
 
-## Check the top
-head(cap)
 
-## Sense check
-add <- add[upyear !=0]
-
+## Sense check - this commented-out code was for an early version of the dataset where there were some 0s in operating year
+# add <- add[upyear !=0] 
 ## Use expand_grid to make sure that there's a key for every year
 ## (this is easy to overlook until you plot)
-cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
-setkey(cap, year, Technology)
+# cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
+# setkey(cap, year, Technology)
 
 ## now merge in the additions and subtractions
-cap <-  merge(cap,merge(add, subtract, all = TRUE),all.x = TRUE)
+# I'm merging the additions and subtractions, all and all.x is equivalent to an outer join which means I keep ALL rows across the two tables. If I didn't do this I'd get back only those columns for which a technology-year pair had both power plants retiring and coming online.
+add_subtract <-merge(add, subtract, all = TRUE)
+# now I'm merging them with the index that I've defined. I'm doing a left-join here with all.x = TRUE, which means I only want to keep the index of the left dataset (my first parameter, in this case cap). This means that any rows in add_subtract without a corresponding index in the key of cap would be discarded. 
+cap <-  merge(cap, add_subtract,all.x = TRUE)
+# View the top 50 rows. There's a lot of NAs since many technologies did not exist in 1891.
 head(cap,50)
 ```
 
-```{r}
-## If there were no additions or subtractions in a year of a technology, set to 0.
+```{r echo = TRUE}
+## So if there were no additions or subtractions in a year of a technology, set to 0.
 cap[is.na(capacity_additions), capacity_additions:= 0]
 cap[is.na(capacity_subtractions), capacity_subtractions:= 0]
-# Calculate the net capacity change and the cumulative build of generating capacity
+# Calculate the net capacity change = additions - subtractions
 cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractions), by = key(cap)]
+# Take a cumulatie sum over the years by technology.  Note here that because year is the first value of my key, the cumulative sum knows to sum over it. 
 cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
 cap_final
 ```
 
-```{r}
-# Change tech also to a factor
+```{r echo = TRUE}
+# Change tech to a factor so that categories work for plotting
 cap_final[,Technology:= as.factor(Technology)]
-# Change data types to factors then reset key
+# view it
 cap_final
 ```
 
-```{r}
+```{r echo = TRUE}
 output_folder <- '.'
 # Unaggregated Technology stacked area chart
 ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
@@ -178,16 +256,30 @@ ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
   ylab("Nameplate Capacity (MW)") +
   ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
   # scale_fill_manual(values = colors)
+
+# Save to file. 
 ggsave(file.path(output_folder, 'stacked_capacity_all.pdf'), width = 16, height = 9)
 
+
+# Create a separate dataset just with the totals so you can plot a line chart of total capacity over this one (you'll need to do this when with emissions in the homework)
+total_capacity <- cap_final[, sum(capacity), by = year]
 # Unaggregated Technology stacked area chart as a proportion of total capacity
-ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
-  geom_area(position = 'fill') +
-  theme(legend.text = element_text(size = 8)) +
-  guides(fill = guide_legend(ncol = 1)) +
-  ylab("Nameplate Capacity (% of total)") +
-  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
+
+# Play around with this scaling factor
+coeff = 3e6
+# Plot capfinal
+ggplot(cap_final) +
+  geom_area(position = 'fill',aes(year, capacity, fill= Technology)) + # This is the area chart
+  geom_line(data =total_capacity,aes(x=  year, y = V1/coeff)) + # This is the line chart
+  scale_y_continuous(name = "Capacity (% of total)", # Sets the first axis' name
+                     sec.axis = sec_axis(~.*coeff, name="Capacity (MW)")) + # This is the second axis.
+  theme(legend.text = element_text(size = 8)) + # Make the font size smaller
+  guides(fill = guide_legend(ncol = 1)) + # Make sure there's only one column in the legend
+  ylab("Nameplate Capacity (% of total)") + # Set the ylabel
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") # Set the tile and subtitle
   # scale_fill_manual(values = colors) +
+
+# Save to disk
 ggsave(file.path(output_folder, 'proportion_capacity_all.pdf'), width = 16, height = 9)
 ```
 
