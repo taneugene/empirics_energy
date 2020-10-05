@@ -1,0 +1,126 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Regression Example
+
+## mtcars
+
+This is a quick and dirty example of how to do regressions in r and use stargazer. 
+I'm going to use the mtcars dataset, which comes [prepackaged with R](http://www.sthda.com/english/wiki/r-built-in-data-sets). From the documentation `?mtcars`, you can see the variable descriptions:
+
+> A data frame with 32 observations on 11 (numeric) variables.  
+[, 1]	mpg	Miles/(US) gallon  
+[, 2]	cyl	Number of cylinders  
+[, 3]	disp	Displacement (cu.in.)  
+[, 4]	hp	Gross horsepower  
+[, 5]	drat	Rear axle ratio  
+[, 6]	wt	Weight (1000 lbs)  
+[, 7]	qsec	1/4 mile time  
+[, 8]	vs	Engine (0 = V-shaped, 1 = straight)  
+[, 9]	am	Transmission (0 = automatic, 1 = manual)  
+[,10]	gear	Number of forward gears  
+[,11]	carb	Number of carburetors  
+
+```{r, echo = TRUE}
+?mtcars
+library(data.table)
+mtcars
+dt <- as.data.table(mtcars)
+```
+
+
+## Formula syntax
+
+First we have to talk about formulas. 
+
+Formulas are a little bit of a new syntax, and you can get a pretty in depth tutorial from datacamp [here if you are interested](https://www.datacamp.com/community/tutorials/r-formula-tutorial).
+
+But for empirical exercise 1 it'll be very simple - you only have two variables (carbon emissions and coal capacity)! The syntax for this regression (as above in the ) 
+
+$$y = \alpha + \beta x + \epsilon$$
+is just `y~x`. Let's see how we use it in base r.
+
+## lm for linear model
+
+The simplest regressions is linear regression, and on the mtcars dataset we'll run a regression of the miles per gallon on weight. 
+
+The regression I run is this:
+
+$$mpg = \alpha +\beta wt + \epsilon$$
+and it's just this code.  The first parameter to the function lm is a *formula*, which is the syntax I describe above, and the second is the dataset. You can of course look at the other parameters using `?lm`. 
+
+```{r}
+lm(mpg ~ wt, dt)
+
+```
+As you can see, the $\beta_0$ term is 37, and the $\beta_1$ term is -5.  We interpret this is as -5.344 miles per gallon per 1000 lbs, which I got from the data descriptions.
+
+If I wanted to add more variables, say a dummy for the transmission and the number of cylinders:
+
+$$mpg = \alpha + \beta_0wt + \beta_1cyl + \beta_2am + \epsilon$$
+Then my code would be `mpg ~ wt + cyl + am`. Let's try it:
+
+```{r}
+lm(mpg ~ wt + cyl + am, dt)
+```
+
+You might want to get more than just your coefficients, like standard errors. You can report more model output by saving the output to a variable and then using the function `summary()`. This way, we can see that in the first regression, weight is a significant predictor of mpg at the 99.9% level. In the second regression weight and cylinders are significant predictors at the 99% level, but transmission is not significant. 
+
+```{r}
+model1 <- lm(mpg ~ wt, dt)
+summary(model1)
+model2 <- lm(mpg ~ wt + cyl + am, dt)
+summary(model2)
+```
+
+
+### Robust Standard Errors and panel data
+
+Unfortunately, base r does not give robust standard errors by default. We use robust standard errors to adjust for [heteroskedasticity](https://en.wikipedia.org/wiki/Heteroscedasticity). 
+
+First, install estimatr using `install.packages("estimatr")`. Now load the library, you'll use the [lm_robust](https://declaredesign.org/r/estimatr/) function which uses the same format as lm above, but with heteroskedasticity-consistent standard errors. (HC2 stands for heteroskedasticity consistent method 2).
+
+
+```{r}
+# The first model
+library(estimatr)
+model1 <- lm_robust(mpg ~ wt, dt)
+model1
+summary(model1)
+```
+Note we've lost our stars!
+
+```{r}
+# The second model
+model2 <- lm_robust(mpg ~ wt + cyl + am, dt)
+model2
+summary(model2)
+```
+
+## Stargazer
+
+Stargazer doesn't come prepackaged with R, so you need to install it first as well.
+Run `{r} install.packages("stargazer")` to install it. 
+
+Unfortunately, stargazer and estimatr aren't perfectly compatible, and so stargazer [has to be tricked](https://declaredesign.org/r/estimatr/articles/regression-tables.html#stargazer) into using robust standard errors.  
+
+```{r}
+library(stargazer)
+# Make the fit the base r way
+fit_1 <- lm(mpg ~ wt, data = mtcars)
+fit_2 <- lm(mpg ~ wt + cyl + am, data = mtcars)
+# use starprep (from the estimatr library) to uses lm_robust defaults for standard errors (robust HC2 SEs are the default in both lm_robust). 
+# See https://declaredesign.org/r/estimatr/articles/regression-tables.html#stargazer
+
+# Then compare the two regressions.
+stargazer(fit_1, fit_2, se = starprep(fit_1, fit_2), type = 'text')
+```
+
+
+
+
+
