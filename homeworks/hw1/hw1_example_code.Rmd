@@ -1,0 +1,276 @@
+---
+title: "Empirical Exercise 1 Answer Key"
+output: html_notebook
+---
+```{r}
+# Load libraries at the top of the .Rmd
+library(tidyverse)
+library(readxl)
+library(data.table)
+```
+
+
+
+# Empirical Analysis of Energy Markets - U6616
+## Empirical Exercise I - Data Exploration - Answer Key
+
+### Intro 
+
+This problem set is due on October 2. I strongly recommend to start working on the homework early. I would suggest to plan on completing the first two parts by September 20. You can work in pairs and submit a common solution. Please submit the homework as an R markdown file (if there are data files, they put all the files in a zip file). The code must run without errors. To make this easier, set the working directory at the beginning so it can be easily changed by someone else running the code.
+
+The purpose of this dataset is to analyze how the capacity of different fuels used to generate electricity in the United States has changed over time. We will also look at how emissions of different pollutants have changed and think about potential links between the two.
+
+### Question 1
+Start at the [EIA Electric Power Annual](https://www.eia.gov/electricity/annual/).
+
+#### First download Tables 4.2.A and 4.2.B., which contain capacity by source over time.
+
+I do this using code, but you could have just downloaded the excel files normally and put them in your R working directory (you figure this out by writing `getwd()`, or opening a new project in a particular folder) to complete this part. 
+
+```{r echo = TRUE}
+
+# Put the urls in a variable
+urls <- c("https://www.eia.gov/electricity/annual/xls/epa_04_02_a.xlsx","https://www.eia.gov/electricity/annual/xls/epa_04_02_b.xlsx")
+
+# Where do I want to store the data and outputs for the whole exercise?
+# educational note: "." means current working directory, check your current working directory with getwd()
+data_folder <- "data" 
+output_folder <- "output"
+
+
+download_file <- function(url){
+  #' Function to download and unzip.
+  # Input
+  print(url)
+  # file name
+  print(basename(url))
+  # concatenate the filename to your data storage
+  fname <- file.path(data_folder, basename(url))
+  print(fname)
+  # If the file doesn't exist download it, otherwise just return where it's stored.
+  if (!file.exists(fname)){
+    download.file(url, fname)
+  }
+  return(fname)
+}
+
+# Create those folders if they don't exist
+dir.create(file.path(".", data_folder), showWarnings = T)
+dir.create(file.path(".", output_folder), showWarnings = T)
+
+# NOTE: I do this here but you can do this later 
+# Do the same for outputs - where do I want to store it?
+
+# Create the folder if it doesn't exist
+dir.create(file.path(".", output_folder), showWarnings = T)
+
+# Use the function
+fnames <- c(download_file(urls[1]),download_file(urls[2]))
+```
+#### Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+
+* Loading the files is easiest using the 'import dataset' function, or navigating to the file in the lower right hand side, finding and clicking the file and hitting import dataset from the drop-down menu.
+* By use the appropriate class, we mean that the data type of the variable should be appropriate for analysis. 
+* Anticipating the future questions, you only needed to load the first 12 rows of each file. 
+* You could describe each variable in the data-type sense with `str()`, or in the statistical sense with `summary()`. Bonus points given for doing both. 
+* Using int or date are both acceptable for dealing with years (ints are easier, the advantage of dates is allowing you to deal with leap years, counting number of days across years and months, etc)
+
+##### Describe each variable:
+Year is self-described, each of the other columns is the capacity in MW for 
+
+
+```{r}
+# Load the files to R
+a <- read_excel(fnames[1], skip = 2, n_max = 12)
+b <- read_excel(fnames[2], skip = 4, n_max = 12)
+
+# Use data.table
+a <- as.data.table(a)
+b <- as.data.table(b)
+
+# Drop unnecessary rows
+a <- a[!1]
+b <- b[!1]
+
+# Use appropriate classes - I'll show 2 methods to do this column by column
+# a Base-r method (this doesn't require data.table)
+a$`Estimated Photovoltaic` <- as.numeric(a$`Estimated Photovoltaic`)
+a$Year <- as.integer(a$Year)
+# a data.table method :=
+b[,Year := as.integer(Year)]
+b[,`Estimated Small Scale Photovoltaic` := as.numeric(`Estimated Small Scale Photovoltaic`)]
+
+# This reports a description of datatypes
+str(a)
+str(b)
+
+# This reports summary statistics. 
+summary(a)
+summary(b)
+```
+
+
+#### What is capacity? Make sure you understand the difference between capacity and generation.
+
+*Capacity* The maximum electric power output (rate of energy generation, or energy over time) that can be output from a power plant. 
+
+These datasets use 'Net Summer Capacity', which is ["the maximum output, commonly expressed in megawatts (MW), that generating equipment can supply to system load, as demonstrated by a multi-hour test, at the time of summer peak demand (period of June 1 through September 30."](https://www.eia.gov/tools/glossary/index.php?id=net%20summer%20capacity)
+
+
+*Generation* is a measure of energy, not power (the derivative of energy over time), and is calculated with a formula like this:
+  
+$$\sum_i power_i*time_i $$
+  
+where each i refers to a different level of power generation that can be of any length. For example, if a 10MW natural gas plant produces its capacity (10MW) for 12 hours, half-capacity (5MW) for 6 hours, and is turned off for 6 hours, the generation is:
+
+$$ 10MW*12h + 5MW * 6h + 0MW*6h = 150MWh.$$
+  
+Another term you hear relating these tho things is the **capacity factor**, which unintuitively is a ratio of actual *generation* over the *total theoretical generation*. Using the same example, the total theoretical annual generation of the 10MW natural gas plant is $10MW *24hrs/day*365 days/year$, so if in a year the plant produces 40000MWh of energy, its capacity factor would be $$\frac{40000MWh}{10 MW * 24hrs/day*365 days/year} = 45.6\% $$.
+
+#### Plot total capacity over time. How has this changed?
+
+Extra points for readable/converted units, and for x scale that doesn't have .5s. 
+
+Total capacity increases over time, From 2008 - 2012, in increases by about 50 GW, and from 2015 to 2018 it increases by about 35 GW. It stays about constant from 2012-2016.  The increases put together only constitute about 8% of the initial capacity. 
+
+```{r}
+# Make the plot GW for more readability!
+plot1 <- ggplot(a , mapping = aes(x = Year, y = `Utility Total`/1000))+
+  geom_line()+
+  # Zoomed in version
+  # limits set the bounds of the y axis
+  scale_y_continuous(name = "Total Utility Capacity (GW)", limits = c(1000,1100)) + 
+  # make every year labeled
+  scale_x_continuous(n.breaks = 10)
+plot1
+
+# Show the absolute value on the y axis so you don't exagerrate the difference.
+# If you are using the same data, you can overwrite parameters for the plot this way:
+plot2 <- plot1 + scale_y_continuous(name = "Total Utility Capacity (GW)", limits = c(0,1100))
+plot2
+```
+
+#### Plot the share of capacity from the different sources over time. How has this changed?
+
+It's really important here to realize that we ask you to use both tables, and that means you don't want to double count.  High-level algorithm:
+1. Join tables
+2. Remove double-counted columns
+3. Plot share using a stacked bar or area graph
+
+It's nice to use intuitive colors for fuels. 
+
+```{r}
+# These aren't necessary because dt is smart, but you should set keys before joins to build good habits
+setkey(a, Year)
+setkey(b, Year)
+# Join
+dt1 <- merge(a,b)
+dt1
+
+# Remove double counted columns and totals
+# Print possible columns
+names(dt1)
+
+
+# List of sources you should remove
+remove <- c("Utility Total","Estimated Photovoltaic","Other Renewable Sources","\r\nTotal Utility (Other Renewable Sources)","Total Solar Photovoltaic","Total Solar")
+
+# Syntax tip
+# DT[,Cols.Chosen:=NULL] Delete the column with column name Cols.chosen
+# DT[,(Cols.Chosen):=NULL] Delete the columns specified in the variable Cols.chosen
+
+# Remove these columns
+dt1[,(remove) := NULL]
+
+# Melt the columns down to plot
+dt1 <- melt(dt1, "Year")
+dt1
+
+# You might get this error: 	Removed 6 rows containing missing values (position_stack),
+# that's because there's no data for Estimated Small Scale Photovoltaic before 2014. 
+dt1[is.na(value)]
+
+# You can reasonably assume it's 0
+dt1[is.na(value), value := 0]
+
+# Plot
+# There's a color cheat sheet here, or you can use hex codes if you know them 
+# http://sape.inf.usi.ch/quick-reference/ggplot2/colour
+ggplot(dt1, aes(x = Year, y = value/1000, fill = variable)) + 
+  geom_area() +  
+  scale_x_continuous(n.breaks= 10) + 
+  scale_y_continuous(name = "Capacity (GW)") +
+  scale_fill_manual(name = "Energy Source", values=c("chocolate4", "black", "gray79","gray22", 'lightgoldenrod','cornflowerblue',"cadetblue1", "coral4", 'aliceblue','gold', "orange","tan4", 'brown2', "seagreen", "gold2"))
+
+ggsave(file.path(output_folder, 'part1_capacity.pdf'), width = 16, height = 9)
+
+  
+```
+
+
+
+### Question 2
+Now we will obtain data on emissions over time. For this, follow [this link](https://www.eia.gov/totalenergy/data/browser/index.php?tbl=T11.06) to the EIA Monthly Energy Review. Section 11 contains data on many emissions sources, but just download the data set on carbon emissions from energy consumption in the electric power sector (11.6).
+
+There was some confusion about this filetype - T11.06 is in fact a csv/excel file depending on which version you downloaded. But it didn't have the .xls or .csv at the end of the file, so some detective work was needed to figure this out.  
+
+#### Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+
+```{r}
+ ##################
+# Emissions by year
+
+# Download the file using the function defined in q1.
+fname <- download_file("https://www.eia.gov/totalenergy/data/browser/csv.php?tbl=T11.06")
+
+# Load a csv
+em <-  fread(fname)
+
+# data type and statistical description
+str(em)
+summary(em)
+em
+```
+
+```{r}
+# Get the year and month by getting the quotient and remainder after dividing by 100
+em[, `:=`(year = YYYYMM%/%100, month =  YYYYMM%%100)]
+# Get the annual data which is coded as the 13th month in this dataset
+em <-  em[!grepl('total',Description, ignore.case = TRUE) & month==13]
+# Check everything is in the same units, convert to factor
+em[,c('Unit', 'Description','Value'):= list(as.factor(Unit),as.factor(Description),as.numeric(Value))]
+# Make missing values 0
+em[is.na(Value), Value := 0]
+```
+
+#### Plot total emissions over time. How have they changed?
+
+```{r}
+setkey(em, year)
+em_total <- em[,.(`Total Emissions`=sum(Value)),by = key(em)]
+ggplot(em_total, aes(x = year, y = `Total Emissions`/1000)) + 
+  geom_line() + 
+  scale_y_continuous(name = "Total Emissions (Billion Metric Tons of CO2)", limits = c(0,3))
+```
+
+
+#### Plot the share of emissions from the different sources over time. How has this changed? How do you relate this to what you observed in the previous question?
+```{r}
+# Plot emissions over time by technology of generator
+ggplot(em, aes(x= year, y = Value/1000, fill = Description))+
+  geom_area(position = 'stack') +
+  ggtitle("United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
+  ylab("Billion Metric Tons of CO2") +
+  scale_fill_manual(name = "Power Plant Technology", values=c("chocolate4", "black", 'brown2',"gray79","coral4","chocolate4","black","gray22"))
+ggsave(file.path(output_folder, 'emissions.pdf'), width = 16, height = 9)
+```
+
+
+
+
+
+
+
+
+
+
