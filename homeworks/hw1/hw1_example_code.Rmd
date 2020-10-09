@@ -1,15 +1,17 @@
 ---
-title: "Empirical Exercise 1 Answer Key"
-output: html_notebook
+title: "Recitation 5"
+output:
+  html_document:
+    df_print: paged
 ---
 ```{r}
 # Load libraries at the top of the .Rmd
 library(tidyverse)
 library(readxl)
 library(data.table)
+library(estimatr)
+library(stargazer)
 ```
-
-
 
 # Empirical Analysis of Energy Markets - U6616
 ## Empirical Exercise I - Data Exploration - Answer Key
@@ -55,14 +57,8 @@ download_file <- function(url){
 }
 
 # Create those folders if they don't exist
-dir.create(file.path(".", data_folder), showWarnings = T)
-dir.create(file.path(".", output_folder), showWarnings = T)
-
-# NOTE: I do this here but you can do this later 
-# Do the same for outputs - where do I want to store it?
-
-# Create the folder if it doesn't exist
-dir.create(file.path(".", output_folder), showWarnings = T)
+invisible(dir.create(file.path(".", data_folder), showWarnings = T))
+invisible(dir.create(file.path(".", output_folder), showWarnings = T))
 
 # Use the function
 fnames <- c(download_file(urls[1]),download_file(urls[2]))
@@ -76,13 +72,12 @@ fnames <- c(download_file(urls[1]),download_file(urls[2]))
 * Using int or date are both acceptable for dealing with years (ints are easier, the advantage of dates is allowing you to deal with leap years, counting number of days across years and months, etc)
 
 ##### Describe each variable:
-Year is self-described, each of the other columns is the capacity in MW for 
+Year is self-described, each of the other columns is the capacity in MW for each energy source. 
 
-
-```{r}
+```{r echo = FALSE}
 # Load the files to R
-a <- read_excel(fnames[1], skip = 2, n_max = 12)
-b <- read_excel(fnames[2], skip = 4, n_max = 12)
+invisible(a <- read_excel(fnames[1], skip = 2, n_max = 12))
+invisible(b <- read_excel(fnames[2], skip = 4, n_max = 12))
 
 # Use data.table
 a <- as.data.table(a)
@@ -100,12 +95,14 @@ a$Year <- as.integer(a$Year)
 b[,Year := as.integer(Year)]
 b[,`Estimated Small Scale Photovoltaic` := as.numeric(`Estimated Small Scale Photovoltaic`)]
 
-# This reports a description of datatypes
+# This reports a description of datatypes for table a
 str(a)
+# This reports a description of datatypes for table b
 str(b)
 
-# This reports summary statistics. 
+# This reports summary statistics for table a
 summary(a)
+# This reports summary statistics for table b
 summary(b)
 ```
 
@@ -141,12 +138,14 @@ plot1 <- ggplot(a , mapping = aes(x = Year, y = `Utility Total`/1000))+
   # limits set the bounds of the y axis
   scale_y_continuous(name = "Total Utility Capacity (GW)", limits = c(1000,1100)) + 
   # make every year labeled
-  scale_x_continuous(n.breaks = 10)
-plot1
+  scale_x_continuous(n.breaks = 10) + 
+  ggtitle("Total capacity over time 2008-2018")
+ggsave("output/capacity2008-2018.png")
 
 # Show the absolute value on the y axis so you don't exagerrate the difference.
 # If you are using the same data, you can overwrite parameters for the plot this way:
 plot2 <- plot1 + scale_y_continuous(name = "Total Utility Capacity (GW)", limits = c(0,1100))
+ggsave("output/capacity_absolute2008-2018.png")
 plot2
 ```
 
@@ -159,7 +158,7 @@ It's really important here to realize that we ask you to use both tables, and th
 
 It's nice to use intuitive colors for fuels. 
 
-```{r}
+```{r echo = TRUE}
 # These aren't necessary because dt is smart, but you should set keys before joins to build good habits
 setkey(a, Year)
 setkey(b, Year)
@@ -169,11 +168,12 @@ dt1
 
 # Remove double counted columns and totals
 # Print possible columns
-names(dt1)
+# names(dt1)
 
 
 # List of sources you should remove
 remove <- c("Utility Total","Estimated Photovoltaic","Other Renewable Sources","\r\nTotal Utility (Other Renewable Sources)","Total Solar Photovoltaic","Total Solar")
+
 
 # Syntax tip
 # DT[,Cols.Chosen:=NULL] Delete the column with column name Cols.chosen
@@ -201,10 +201,7 @@ ggplot(dt1, aes(x = Year, y = value/1000, fill = variable)) +
   scale_x_continuous(n.breaks= 10) + 
   scale_y_continuous(name = "Capacity (GW)") +
   scale_fill_manual(name = "Energy Source", values=c("chocolate4", "black", "gray79","gray22", 'lightgoldenrod','cornflowerblue',"cadetblue1", "coral4", 'aliceblue','gold', "orange","tan4", 'brown2', "seagreen", "gold2"))
-
 ggsave(file.path(output_folder, 'part1_capacity.pdf'), width = 16, height = 9)
-
-  
 ```
 
 
@@ -212,9 +209,11 @@ ggsave(file.path(output_folder, 'part1_capacity.pdf'), width = 16, height = 9)
 ### Question 2
 Now we will obtain data on emissions over time. For this, follow [this link](https://www.eia.gov/totalenergy/data/browser/index.php?tbl=T11.06) to the EIA Monthly Energy Review. Section 11 contains data on many emissions sources, but just download the data set on carbon emissions from energy consumption in the electric power sector (11.6).
 
-There was some confusion about this filetype - T11.06 is in fact a csv/excel file depending on which version you downloaded. But it didn't have the .xls or .csv at the end of the file, so some detective work was needed to figure this out.  
+There was some confusion about this filetype - T11.06 is in fact a csv/excel file depending on which version you downloaded. But it didn't have the .xls or .csv at the end of the file, so some detective work was needed to figure this out.  Either loading it directly, or changing the filename to add .csv or .xls at the end was necessary.  
 
-#### Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+### Load the files to R and describe each variable. Make sure to use the appropriate class for each variable.
+This question needs either a datatype description or a statistical description.  YYYYMM could be int, could be parsed to a date, or split into two ints. 
+
 
 ```{r}
  ##################
@@ -245,30 +244,447 @@ em[is.na(Value), Value := 0]
 
 #### Plot total emissions over time. How have they changed?
 
-```{r}
+Total Emissions from the electricity grid have risen slowly by about 1 billion metric tons since the 1970s until a peak in 2005. Then it falls back to the 1970s levels in 2020 'decarbonization'.  Note that this isn't total energy in the US, but just power plants.  The transport sector has not decarbonized by as much. 
+
+The difference between this and the next question is to just to a line graph and a stacked area/bar chart separately. Bonus points for relabelling axes to billion metric tons, marks for title, axes labels.
+
+```{r echo = TRUE}
 setkey(em, year)
 em_total <- em[,.(`Total Emissions`=sum(Value)),by = key(em)]
 ggplot(em_total, aes(x = year, y = `Total Emissions`/1000)) + 
   geom_line() + 
-  scale_y_continuous(name = "Total Emissions (Billion Metric Tons of CO2)", limits = c(0,3))
+  scale_y_continuous(name = "Total Emissions (Billion Metric Tons of CO2)", limits = c(0,3)) + 
+  ggtitle('2b) Emissions over time 1973-2017')
 ```
 
 
 #### Plot the share of emissions from the different sources over time. How has this changed? How do you relate this to what you observed in the previous question?
+Since 2005, natural gas has rapidly increased while coal has decreased.  This has meant that electricity generation has substituted coal emissions for natural gas emissions. We can't tell whether coal plants have totally been replaced or not yet, that's part 3 - is the drop in emissions due to coal being replaced by natural gas? or renewables? What proportion?
+
 ```{r}
 # Plot emissions over time by technology of generator
 ggplot(em, aes(x= year, y = Value/1000, fill = Description))+
   geom_area(position = 'stack') +
-  ggtitle("United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
+  ggtitle("2c) United States CO2 Emissions from Power Plants by Technology and Year", subtitle = "source: EIA-860 data") +
   ylab("Billion Metric Tons of CO2") +
   scale_fill_manual(name = "Power Plant Technology", values=c("chocolate4", "black", 'brown2',"gray79","coral4","chocolate4","black","gray22"))
 ggsave(file.path(output_folder, 'emissions.pdf'), width = 16, height = 9)
 ```
+### Question 3
+Since the previous dataset only had capacity for 10 years, the next step is to download data from EIA Form 860 to build capacity for a period as long as the one for emissions.
+
+#### Follow the steps covered during recitation to build the total capacity of source for each year.
+
+These are just the steps from recitation, I end up showing students part 3a-c. 
+
+##### Download and unzip file
+```{r echo = TRUE}
+
+# This dataset is no longer the early release version!
+url <- "https://www.eia.gov/electricity/data/eia860/xls/eia8602019.zip"
+
+# I want a variable for the name of my data folder
+data_folder <-  "data"
+# Create the folde if it doesn't exist
+dir.create(file.path(".", data_folder), showWarnings = T)
+# Get the path of the file when it is stored on disk
+fname <- file.path(data_folder, basename(url))
+fname
+# If the file doesn't exist already, download from the URL (the web) to the path (your computer's folder called data, relative to your working directory)
+if (!file.exists(fname)){
+  download.file(url, fname)
+}
+# Unzip the folder 
+unzip(fname, exdir = data_folder)
+```
+##### Look and examine the data
+![](../../img/eia860.png)
+
+* What is the difference between 1, 2 and 3? 
+
+the relevant data is in 3
+
+* What is the difference between 3.1 and 3.2...
+
+"Additional Details" are in 3_2+, these we don't need because the capacity, technology, and the operating and retirement years are in 3_1.
+
+* Look at the data we want, is it sufficient to answer the question?
+
+...build capacity for a period as long as the one for emissions
+
+##### Assumption
+
+We don't need any more data. Assume:
+
+ * All power plants in 'Operable' are still 'active' and have been active since "Operating Year"
+ * All power plants in 'Retired and Cancelled' were 'active' from "Operating Year" until "Retirement Year", and that this dataset is exhaustive.
+ * Power plant capacity in any given year is the total capacity of 'active' plants. 
+ 
+ 
+##### 2 methods
+* Have a column with active status...
+* Keep a running tally for each fuel and year. 
+* What is the minimum dataset we need for each method?
+
+##### High-level algorithm for the running tally method
+
+My ideal dataset has a cumulative capacity for each technology-year pair. 
+
+1. For all those power plants are operable, we assume they are active up until the current year, so they never go offline. 
+1. For all those power plants in 'Retired and Cancelled', we assume they are active between their operating and retirement years; if there's no data, we just assume they are cancelled and never operated.  
+1. Get the sum of Power Plant Capacity that came online in each year from the Operating Year column - 'additions' - by technology.
+1. Get the sum of Power Plant Capacity that was retired/came offline from the Retirement Year column - 'subtractions' - in each year by technology.
+1. The 'net capacity change' for each technology-year pair is additions less subtractions.
+1. Running a cumulative sum over the years by technology will give me the total capacity by technology in each year. 
+  
+##### Join vs Concatenate?
+
+* Concatenating (rbindlist) is stacking two datasets
+* Joining (merge, join) is putting two datsets next to each other 
+* Which do we want to do here?
+
+Concatenate
+
+* Which columns are important to do correctly?
+
+The minimum dataset has Operating Year, Retirement Year, Nameplate Capacity (MW), and Technology. 
+
+```{r echo = TRUE}
+
+# Read in the data after unzipping
+fname <- file.path(data_folder, "3_1_Generator_Y2019.xlsx")
+
+# Import the excel sheet using Import Dataset in RStudio.
+operable <-  as.data.table(read_excel(fname, sheet = "Operable", skip = 1, na = 'NA'))
+# Look at structure
+str(operable)
+# View the table
+head(operable)
+
+# Count how many nas there are
+sum(is.na(operable$`Operating Year`)) # base r version
+operable[,sum(is.na(`Operating Year`))] # data.table version, both work, this is better
+
+# View the rows for which there  there's no operating year. 
+operable[is.na(`Operating Year`),] 
+
+# Get the second sheet
+retired <-  as.data.table(read_excel(fname, sheet = "Retired and Canceled", skip = 1, na = 'NA'))
+str(retired)
+# Count how many nas there are using the data table method
+retired[,sum(is.na(`Operating Year`))] # These are all cancelled plants
+retired[,sum(is.na(`Retirement Year`))] # there are 2 retired plants that don't have a retirement year, why? You could assume these retired in 2019, but I don't in this sketch.
+
+# Try binding
+
+# Look up ?rbindlist if you haven't already
+# The first parameter is list
+# use.names makes you match columns based on their names instead of column order
+# Fill is to fill 'retirement Year' in the operable sheet with NAs.
+# idcol provides a column in df (for dataframe) with the list-position of the dataset it came from.  i.e. if you call df$.id it'll show 1s and 2s. 1s mean it comes from operable, and 2s mean that it came from retired.
+df <-  rbindlist(list(operable, retired), use.names = T, fill =  T, idcol = T)
+# Same checks for nulls, note how these numbers change
+df[,sum(is.na(`Operating Year`))]
+df[,sum(is.na(`Retirement Year`))] # Many nulls because none of the operable plants have been retired yet!
+df<- df[!is.na(`Operating Year`)] # filter only those with an operating year
+str(df)
+```
+
+##### Get the right data types
+
+```{r echo=TRUE}
+# Convert all columns which are labelled with 'Plant Code', has 'MW', 'Year', or 'Month' to numeric data type.
+num_cols <-  colnames(df)[grep("MW|Plant Code|Year|Month|Factor|Buoys", colnames(df), ignore.case=T)]
+# Trick I showed last class to apply something over a bunch of columns. See the alternative there if you don't understand this
+df[, (num_cols):= lapply(.SD, as.numeric), .SDcols = num_cols]
+# The above 2 lines are *VERY FANCY*, I explained them in recitation 3. 
+# You can also convert the columns one by one using code like this, which may be easier to understand
+df[,`Nameplate Capacity (MW)`:=as.numeric(`Nameplate Capacity (MW)`)]
+```
+
+##### Change the column names for easy access
+```{r echo = TRUE}
+# Print the columns of df so I know what I am looking for
+colnames(df)
+# Rename these for easy access
+df[,upyear := `Operating Year`]
+df[,downyear := `Retirement Year`]
+df[,capacity :=`Nameplate Capacity (MW)`]
+```
 
 
+##### Get a sum of new and retiring capacity year on year (new variable) by technology
+```{r echo = TRUE}
+# Set a 'key' for df
+# In response to Gabriel's question, I don't explicitly actually use this line
+# But I will set keys later that I do use!
+setkey(df, upyear, Technology)
+# View the key - this is just a list of columns for easy access.
+key(df)
+# One-line data.table query. by parameter:
+# i = choose only the rows which have we have a year for which they come online
+# j = create a column called year which is equal to upyear (this is to join with subtract later), and a column called 'capacity additions' which is the sum of capacities.
+# by = I don't want to sum across the whole dataset for capacities, I only want to do so in groups, which is the operating year-technology pair.  
+add <- df[!is.na(upyear),.(year = upyear,capacity_additions = sum(capacity,na.rm = T)), by = .(upyear, Technology)]
+
+# Same code, I could have done the same thing using the key
+add <- df[!is.na(upyear),.(year = upyear,capacity_additions = sum(capacity,na.rm = T)), by = key(df)]
+
+# Same as making add, only I'm grouping the power plants by the years they come offline rather than online. 
+subtract <-  df[!is.na(downyear),.(year = downyear,capacity_subtractions = sum(capacity,na.rm = T)), by = .(downyear, Technology)]
+# view em
+add
+subtract
+```
+
+##### Join the additions and subtractions
+```{r echo = TRUE}
+
+## Use expand_grid to make sure that there's a key for every year
+## (this is easy to overlook until you plot)
+## The purpose of this is so you don't have NAs in your dataset - I want solar in 1893 to be 0, not NA, but this wouldn't be given by the add or subtract data.tables. 
+# check ?expand_grid
+# This is called an 'index' or 'key'
+cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
+## Check out what this looks like
+head(cap)
+tail(cap)
+
+# The purpose of the key is so that things can join later. Merges and Joins in data,table require that keys are the same so it knows which rows correspond to which other rows in two different datasets. 
+
+## Set keys - note that it's year-Technology now so that the two tables match, instead of operating_year-technology and retirement_year-technology pairs. 
+setkey(add, year, Technology)
+setkey(subtract, year, Technology)
+# Set the key to be the same as (capacity) additions and subtractions above
+setkey(cap, year, Technology)
 
 
+## Sense check - this commented-out code was for an early version of the dataset where there were some 0s in operating year
+# add <- add[upyear !=0] 
+## Use expand_grid to make sure that there's a key for every year
+## (this is easy to overlook until you plot)
+# cap <- as.data.table(expand_grid('year' = min(add[,year]):max(add[,year]), 'Technology' = unique(add[,Technology])))
+# setkey(cap, year, Technology)
 
+## now merge in the additions and subtractions
+# I'm merging the additions and subtractions, all and all.x is equivalent to an outer join which means I keep ALL rows across the two tables. If I didn't do this I'd get back only those columns for which a technology-year pair had both power plants retiring and coming online.
+add_subtract <-merge(add, subtract, all = TRUE)
+# now I'm merging them with the index that I've defined. I'm doing a left-join here with all.x = TRUE, which means I only want to keep the index of the left dataset (my first parameter, in this case cap). This means that any rows in add_subtract without a corresponding index in the key of cap would be discarded. 
+cap <-  merge(cap, add_subtract,all.x = TRUE)
+# View the top 50 rows. There's a lot of NAs since many technologies did not exist in 1891.
+head(cap,50)
+```
+
+#### Plot total capacity over time. How has this changed?
+
+Total capacity grows over time a lot! It seems to follow an S-curve until the year 2000 from 0 to 800GW, and then jumps up again by 1.5x. 
+
+```{r echo = TRUE}
+## So if there were no additions or subtractions in a year of a technology, set to 0.
+cap[is.na(capacity_additions), capacity_additions:= 0]
+cap[is.na(capacity_subtractions), capacity_subtractions:= 0]
+# Calculate the net capacity change = additions - subtractions
+cap_final <- cap[,.(net_capacity_change = capacity_additions-capacity_subtractions), by = key(cap)]
+# Take a cumulatie sum over the years by technology.  Note here that because year is the first value of my key, the cumulative sum knows to sum over it. 
+cap_final[, capacity := cumsum(net_capacity_change), by = Technology]
+cap_final
+```
+
+```{r echo = TRUE}
+cap_total <-  cap_final[, .(total_capacity = sum(capacity)), year ]
+
+ggplot(cap_total, aes(x = year, y = `total_capacity`/1000)) + 
+  geom_line() + 
+  scale_y_continuous(name = "Total Capacity (GW)", limits = c(0,1250)) + 
+  ggtitle("3b) Total Capacity over time")
+
+tail(cap_total)
+```
+
+#### Plot the share of capacity from the different sources over time. How has this changed?
+
+In the next 3 code blocks I spend a bunch of time matching colors to different fuels and aggregating the technologies to form less granular, more high-level groups. This wasn't necessary, but it was good to make the colors intuitive for a reader.  
+
+It was not necessary to filter the dataset to 1973 until the last step, but it tells an exciting story if you don't! In the pre 1910s, everything was hydroelectric. Then fossil fuels took off in the 1940s, and nuclear followed in the 1960s. If you take the stacked bar graph as a proportion, the minimum renewable % seems to have been in about 2005 which is surprising! and wind and solar only started recently, now together comprising about 10% of capacity. Most peole won't know off the top of their head what [combined cycle](https://en.wikipedia.org/wiki/Combined_cycle_power_plant) is - so if they explained this this was good!
+
+
+```{r echo = TRUE}
+# Change tech to a factor so that categories work for plotting
+cap_final[,Technology:= as.factor(Technology)]
+# view it
+tail(cap_final)
+```
+
+```{r echo = TRUE}
+
+# Set colors to use for plotting graphs
+## Set high level groups
+color_key = list('other' = 'coral',
+                 "coal" = "chocolate4",
+                 'petroleum' = "black",
+                 'gas' = "gray79",
+                 'combined cycle' = 'gray22',
+                 'waste' = 'red4',
+                 'nuclear' = 'lightgoldenrod',
+                 'hydro' = 'cornflowerblue',
+                 'wind' = 'aliceblue',
+                 'solar' = 'gold',
+                 'geothermal' = 'brown2'
+                 )
+## Get a list of technologies
+techs <-  unique(cap_final$Technology)
+## Make a hash lookup for the set of 27 techs
+colors <-  rep('coral', length(techs))
+colors <-  setNames(colors, techs)
+## Aggregate by types
+cap_final[, tech := "other"]
+cap_final[, color := "coral"]
+## loop through the big categories and search for them in the technologies.
+for (fuel in names(color_key)){
+  # Make a second key for the 27 techs
+  colors[grep(fuel,techs,ignore.case = TRUE)] = color_key[fuel]
+  # add a column with the 10 techs
+  cap_final[grep(fuel,Technology,ignore.case = TRUE), tech:=fuel]
+  # add a column for the color
+  cap_final[grep(fuel,Technology,ignore.case = TRUE), color:=color_key[fuel]]
+}
+
+# change tech to a factor(categories)
+cap_final[,tech:= as.factor(tech)]
+# reorder in order of pollution levels
+cap_final[,tech := factor(cap_final[,tech],levels = names(color_key))]
+# Change tech also to a factor
+cap_final[,Technology:= as.factor(Technology)]
+# Make a lookup from tech group to technology
+key <-  unique(cap_final[,.(tech,Technology)])
+setkey(key, tech)
+# Change data types to factors then reset key
+cap_final[,Technology := factor(cap_final[,Technology],levels = key[,Technology])]
+cap_final[,color:= as.factor(color)]
+setkey(cap_final, tech, Technology, year)
+# Aggregate on the Technologies to small techs
+cap_agg = cap_final[,.(capacity = sum(capacity)), , .(tech,year, color)]
+
+
+# Unaggregated Technology stacked area chart
+ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
+  geom_area(position = 'stack') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (MW)") +
+  ggtitle("3c) United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
+  # scale_fill_manual(values = colors)
+ggsave(file.path(output_folder, 'stacked_capacity_all.pdf'), width = 16, height = 9)
+
+# Unaggregated Technology stacked area chart as a proportion of total capacity
+ggplot(cap_final, aes(x = year, y= capacity, fill = Technology)) +
+  geom_area(position = 'fill') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (% of total)") +
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
+  # scale_fill_manual(values = colors) +
+ggsave(file.path(output_folder, 'proportion_capacity_all.pdf'), width = 16, height = 9)
+
+# Aggregated Technology - color codedd
+ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
+  geom_area(position = 'stack') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (MW)") +
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") +
+  scale_fill_manual(values = color_key)
+ggsave(file.path(output_folder, 'stacked_capacity_agg.pdf'), width = 16, height = 9)
+
+# Aggregated Technology as % - color coded
+ggplot(cap_agg, aes(x = year, y= capacity, fill = tech)) +
+  geom_area(position = 'fill') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  scale_fill_manual(values = color_key) +
+  ylab("Nameplate Capacity (% of total)") +
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data")
+ggsave(file.path(output_folder, 'proportion_capacity_agg.pdf'), width = 16, height = 9)
+```
+
+
+#### Add total carbon emissions to the graph. Is there any correlation?
+```{r}
+# Unaggregated Technology stacked area chart as a proportion of total capacity
+
+em_total
+
+# Play around with this scaling factor
+
+coeff =  2600
+# Plot capfinal
+ggplot(cap_agg[year >= 1973]) +
+  geom_area(position = 'fill',aes(year, capacity, fill= tech)) + # This is the area chart
+  geom_line(data =em_total,aes(x=  year, y = `Total Emissions`/coeff), color = 'red') + # This is the line chart
+  scale_fill_manual(values = color_key) +
+  scale_y_continuous(name = "Capacity (% of total)", # Sets the first axis' name
+                     sec.axis = sec_axis(~.*coeff/1000, name="Emissions (Billions of Metric Tons)")) + # This is the second axis.
+  theme(legend.text = element_text(size = 8)) + # Make the font size smaller
+  guides(fill = guide_legend(ncol = 2)) + # Make sure there's only one column in the legend
+  ylab("Nameplate Capacity (% of total)") + # Set the ylabel
+  ggtitle("3c) United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") # Set the tile and subtitle
+cap_agg
+
+
+# Plot capfinal
+coeff = 2
+# Aggregated Technology - color codedd
+ggplot(cap_agg[year >= 1973], aes(x = year, y= capacity/1000, fill = tech)) +
+  geom_area(position = 'stack') +
+  theme(legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(ncol = 1)) +
+  ylab("Nameplate Capacity (GW)") +
+  ggtitle("United States Electricity Generation Capacity by Technology and Year", subtitle = "source: EIA-860 data") +
+  scale_fill_manual(values = color_key) +
+  geom_line(data =em_total,aes(x=  year, y = `Total Emissions`/coeff, fill = NULL), color = 'red') + # This is the line chart
+  scale_y_continuous(name = "Capacity (GW)", # Sets the first axis' name
+                     sec.axis = sec_axis(~.*coeff/1000, name="Emissions (Billions of Metric Tons)")) + # This is the second
+ggsave(file.path(output_folder, 'stacked_capacity_agg.pdf'), width = 16, height = 9)
+
+
+```
+
+### Question 4
+
+Suppose you are interested in the causal effect of coal capacity on carbon emissions and you want to use the dataset you just build to estimate it.
+
+#### Run a regression of carbon emissions on coal capacity and present your results using the stargazer package. Use robust standard errors.
+
+This should be straightforward - filter, merge, and then run the regression.
+
+```{r}
+# First we need to join the two datasets
+coal <- cap_agg[tech == "coal"]
+# Setting the key means it knows which rows to merge
+setkey(coal, year)
+# 
+coal <- merge(coal, em_total)
+
+# Make the fit the base r way
+fit_1 <- lm(`Total Emissions` ~ capacity, data = coal)
+# These are the standard errors that should be reported, but see starprep for the next ways.  
+lm_robust(`Total Emissions` ~ capacity, data = coal)
+
+# use starprep (from the estimatr library) to uses lm_robust defaults for standard errors (robust HC2 SEs are the default in both lm_robust). 
+# See https://declaredesign.org/r/estimatr/articles/regression-tables.html#stargazer
+# Then compare the two regressions.
+stargazer(fit_1, se = starprep(fit_1), type = 'text')
+```
+
+#### Does the previous regression capture the causal effect of coal capacity on carbon emissions? Why? If there is bias, do you expected to go in a particular direction? Explain.
+
+We do expect to see the effect of coal capacity on emissions, because we understand a causal mechanism through which capacity affects emissions - through generation. So the regression captures some causal effect.  The explanation of causality requires a mechanism, just because it's biased does not mean it's not causal. 
+
+On the other hand, *identification of the causal effect* does depend on bias. We call this 'establishing causality'. In this case, we have a bunch of other fuels which bias the result - other fuels like natural gas also produces emissions, and these also increase total emissions.  This means that the coefficient is upward biased (it is too high!).
+
+#### Are there any controls you could add to correct this problem? Explain. You don’t have to run more regressions, just to discuss how you would do it assuming you had access to typically available data.
+
+You could add a controls for all of the other fuels, fuel prices, demand etc for things that affect coal generation. 
 
 
 
