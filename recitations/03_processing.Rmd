@@ -3,6 +3,11 @@ title: 'Recitation 3: Processing and Cleaning Data'
 author: "Eugene Tan (TA)"
 date: "9/25/2020"
 output:
+<<<<<<< HEAD
+=======
+  html_document:
+    df_print: paged
+>>>>>>> master
 ---
 
 # Today
@@ -35,6 +40,11 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r echo=TRUE}
 plot(cars)
+<<<<<<< HEAD
+=======
+plot(cars)
+plot(cars)
+>>>>>>> master
 ```
 
 
@@ -67,6 +77,28 @@ superscript^2^
 ~~strikethrough~~
 [cheatsheet 1](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
 [cheatsheet 2](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiwzM7csoPsAhUhTt8KHbgbDR8QFjAAegQICBAB&url=https%3A%2F%2Frstudio.com%2Fwp-content%2Fuploads%2F2015%2F02%2Frmarkdown-cheatsheet.pdf&usg=AOvVaw2JPoZecb8BAHRdCxcP3wDE)
+<<<<<<< HEAD
+=======
+
+```{r}
+
+```
+
+# Homework 1
+
+## Question 1
+### Part a
+Question:
+
+**Answer** This is what i think.
+
+```{r echo}
+download.file(url)
+```
+
+
+
+>>>>>>> master
 ```
 # Header 1
 
@@ -173,8 +205,13 @@ data_folder <- "data"
 dir.create(data_folder, showWarnings = T)
 
 # Create the path I want to save it to
+<<<<<<< HEAD
 file <- file.path(data_folder, basename(url))
 
+=======
+file <- file.path(data_folder, "consumption_dataset.xls")
+file
+>>>>>>> master
 # Download the file
 download.file(url, file)
 ```
@@ -186,6 +223,13 @@ download.file(url, file)
 
 ```{r echo=TRUE}
 df <- read_excel("data/xls.php?tbl=T02.01&freq=m", skip = 10)
+<<<<<<< HEAD
+=======
+
+
+Df <- read_excel("data/xls.php?tbl=T02.01&freq=m", skip = 10, n_max = 50)
+View(Df)
+>>>>>>> master
 # View the table
 df
 # Check the structure - a dataframe is a list of vectors
@@ -213,8 +257,16 @@ columns <- c('month', 'res_prim','res_tot',
   'trans_prim','trans_tot','power_prim',
   'balancing','total')
 names(columns) <- names(df)
+<<<<<<< HEAD
 # Set new names
 setnames(df,columns)
+=======
+
+reference_names <- columns
+# Set new names
+setnames(df,columns)
+df
+>>>>>>> master
 ```
 
 ## Some basic cleaning
@@ -231,6 +283,10 @@ num_cols
 
 # Convert to numeric datatype
 # One-liner 
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
 dt[, (num_cols):= lapply(.SD, as.numeric), .SDcols = num_cols]
 # Manual way
 dt[, res_prim := as.numeric(res_prim)]
@@ -266,6 +322,12 @@ columns_tot <- cols[columns_tot]
 # make two separate dts
 dt_prim <- dt[,..columns_prim]
 dt_tot <- dt[,..columns_tot]
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> master
 ```
 
 ## Unstack or Melt data
@@ -285,7 +347,11 @@ dt_tot
 ```{r echo=TRUE}
 # Setup the chart
 ggplot(dt_tot, aes(x = month, y= value, fill = variable)) +
+<<<<<<< HEAD
   geom_area(position = 'stack') + # Make a stacked area chart
+=======
+  geom_area(position = 'identity') + # Make a stacked area chart
+>>>>>>> master
   ggtitle("Total Energy Consumption by Sector") + # Title it
   ylab("Consumption (Trillion btu)") + # label axes
   xlab("Date") + # label axes
@@ -333,3 +399,47 @@ merge(yearly_tot,yearly_prim)
 
 
 ```
+<<<<<<< HEAD
+=======
+
+## Electricity Market Basics
+
+* Complicated because they have
+  * Infrastructure requirements
+  * Reliability requirements
+  * Changing incentives and equilibrium in different markets
+* Challenging details
+  * Market Power
+  * Coordination for Competition
+* Critical for Environmental Performance
+
+## Classic Grid System 
+![](../img/grid.png)
+
+## Key Physical things to know
+* Electrons flow in the path of least resistance
+* Electricity is not storable (without conversions
+* Unlike fossil fuels, electricity must be kept within a nominal system voltage range
+  * usually +/- 5% of 120V for the US< 230/240V for other countries
+  * Service quality depends on remaining within this range
+  * Utilization voltage is 3-5% below system voltage
+  * Same idea for frequency
+  
+## Voltage around the world
+![](../img/voltage.png)
+## Key institutional points about electricity markets
+
+* In most electricity markets, prices are fixed in the short-term and thus demand is perfectly inelastic
+* Transmission constraints can easily lead to market power
+  * No possibility of additional entry in the short/medium run
+* Most electricity markets around the world are made up of vertically integrated regulated monopolies
+* Oftenstate-owned
+* This is changing in many places
+
+## Load Curve
+![](../img/load_curve.png)
+![](../img/load_curve2.png)
+## Natural Monopolies
+
+![](../img/natural_monopolies.png)
+>>>>>>> master
