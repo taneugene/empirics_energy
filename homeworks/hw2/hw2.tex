@@ -1,0 +1,149 @@
+
+\documentclass[11pt]{article}
+\usepackage{bibentry}
+\usepackage[margin=1.4in]{geometry}
+\pretolerance=10000
+\bibliographystyle{plainnat}
+\usepackage{natbib}
+\nobibliography*
+\usepackage[colorlinks, urlcolor=blue]{hyperref}
+\renewcommand{\arraystretch}{1.5}
+\usepackage[nodisplayskipstretch]{setspace}
+\newenvironment{tight_itemize}{
+\begin{itemize}
+  \setlength{\itemsep}{0pt}
+  \setlength{\parskip}{0pt}
+}{\end{itemize}}
+
+\usepackage{hyperref}
+\begin{document}
+
+
+
+\begin{flushleft}
+Columbia University SIPA	
+
+Fall 2019
+
+\end{flushleft}
+
+
+\begin{center}
+\textbf{Empirical Analysis of Energy Markets - U6616}
+
+Empirical Exercise 2
+
+\end{center}
+
+\begin{flushright}
+Prof. Ignacia Mercadal	
+\end{flushright}
+
+This problem set is due on \textbf{October 17th at 11:59pm}. Students are allowed to discuss with others, but each student must submit his or her own solution. Please submit the homework as an R notebook (if there are data files,  put the code and data files in a zip file). The code must run without errors. If there are errors, it will cost you 10 points and you will be given 24 hours to correct it, after which you will have to indicate clearly where was the error. 
+ 
+ 
+\begin{enumerate}
+	
+	\item (October 5) Go to the energy dataset provided by S\&P Global available \href{https://platform.mi.spglobal.com/web/client?auth=inherit#news/home}{here}.\footnote{If you don't have access using your Columbia email, send an email to the professor.} Go to Power/Generation Supply Curve and download the  dataset for one of the following ISOs:  MISO, PJM, ERCOT, or New England ISO, for either 2009 or 2018 (please sign up \href{https://docs.google.com/spreadsheets/d/1zkZpxXjbmGmKryrFiwYVkW4bj-pE-RdYL4CNSW-uaeE/edit?usp=sharing}{here} \textbf{before 10/4} so each student does a different dataset).\footnote{Notice you can only access this dataset from within campus. You can email S\&P support if you have any questions about the data, they usually respond quick. You can also email the TA or the professor.}
+		
+		 Select the following variables: 
+			\begin{itemize}
+			\item Plant Unit key
+			\item Primary fuel type
+			\item Generation technology
+			\item Summer capacity MW
+			\item Variable O\&M cost per MWh (this is the variable cost)
+			\item Total fuel cost per MWh (this is part of the variable cost)
+			\item Emission allowances costs (this is part of the variable cost)
+			\item Fixed O\&M cost
+			\item Heat rate btu/ kwh
+			\item Heat input
+			\item Net generation MWh
+			\item Capacity factor
+			\item $NO_X$ Emissions Rate lbs MMBtu
+			\item $SO_2$ Emissions Rate lbs MMBtu
+			\item $CO_2$ Emissions Rate lbs MMBtu
+			\end{itemize}
+
+\clearpage
+	Start by cleaning and understanding your data.
+	For this, do the following:
+	\begin{enumerate}
+	\item What does each variable represent?
+	\item Assign convenient yet meaningful names to each variable in the dataset.
+	\item What is the class of each variable? Make sure to convert them to the proper class before doing this. For example, if net generation is a character, make it numeric.
+	\item Describe each variable: what values does it take? Do you have any concerns about some variable (extreme values, missing values)?
+	\end{enumerate}
+ 
+	\item (October 5) Now let's look at the importance of each fuel in this market. 
+		\begin{enumerate}
+		\item What is the fuel composition of this market according to capacity (i.e. how much capacity for each fuel)? Show it in a pie chart.
+		\item What is the fuel composition of this market in terms of net generation? Show it in a pie chart.
+		\item Why are they different or similar?
+		\end{enumerate}
+
+\item (October 5) Organize the data and plot the generation supply curve using a different color for each fuel (reproduce the plot you can build online). For this, you have to order generators according to variable cost, and calculate the cumulative capacity of the system. Use geom\_point such that each plant is a dot, but do not connect the dots. Label the plot properly, add a title and a legend.
+	\begin{enumerate}
+	\item Are fuels ordered by cost? What do you think is the role of cost in explaining the differences between the capacity and net generation shares of each fuel?
+	\end{enumerate}
+	
+\item (October 12) Now go to the same website and download load data for the same ISO and year. You can find this by going to Power/Regional Summary Statistics.
+	\begin{enumerate}
+	\item  You will use three load values: summer peak, winter peak, and average load. To calculate average load, take the Actual Net Energy for Load (you can also use net energy from the power plant dataset you've been using so far), divide by the number of hours in a year ($365\times24$) and multiply by 1000 to go from GWh to MWh.
+	\item Add the load values to the supply curve plot as vertical lines. Save this plot as a pdf file using \href{https://ggplot2.tidyverse.org/reference/ggsave.html}{ggsave}.
+	\item For each of these three load levels, find the price that would have cleared the market if price were equal to cost, i.e. find the point in the supply curve intersects the load curve (vertical line) in the plot.
+	\end{enumerate}
+	
+
+\item (October 12) Now you will calculate the profits that each generator would have made if the price had been the price you find assuming average load (the price on an average hour). 
+	\begin{enumerate}
+	\item First, calculate profits, which are given by $(P-mc)Q$. Use variable cost as marginal cost, quantity is net generation. Describe profits by fuel type. For this, create a table that includes minimum, percentile 25, mean, median, percentile 75, and max value for each fuel type (fuel types are rows).
+	\item Now compute total profits considering fixed costs $(P-mc)Q -F$, and create the same table as above. Do firms cover their costs?
+	\end{enumerate}
+\item (October 16) Now we will repeat the same exercise but with social cost instead of private cost.
+	\begin{enumerate}
+	\item 	We will use \$50 for the social cost of carbon, but write your code using it as a parameter such that you can easily change it (Define scc as a variable at the beginning, and use scc instead of the actual value in the code.  ). 
+	\item Compute the social variable cost for each generation. First, combine heat rate and $CO_2$ emissions rate to obtain $CO_2$ tons emitted per MWh. Then, multiply this value by the social cost of carbon.
+	\item Plot the social cost supply curve and load. Find the price that would clear if load was equal to average load (call this $P^S$), and the corresponding quantity. 
+	\end{enumerate}
+	
+	\item (October 16) Now we will compare total emissions in a world that dispatches plants according to private variable cost (as it is today), with a world in which plants are dispatched according to social cost (which would happen with a tax on carbon, for example).
+	\begin{enumerate}
+	\item Calculate total emissions during an average hour assuming firms are dispatched according to social cost. For this, you have to follow these steps:
+		\begin{enumerate}
+		\item Create variable that indicates whether a plant operates or not in an average hour (it operates if its social cost is lower than or equal to $P^S$). 
+		\item Create another variable with each plant's emissions assuming they produce at capacity (why capacity? Think of the supply curve). 
+		\item Then add up emissions for all plants that operate when the price is lower than or equal to $P^S$.
+		\end{enumerate}
+	\item Find total emissions for the case in which plants are dispatched according to private variable cost, not social cost, using the procedure above. Notice that now a plant operates if its variable cost is at or below the clearing price calculated in 4c.
+	\item How many tons could we save in an hour if the social cost of carbon were internalized? And in a day? And in a year? Comment about how the fuel shares of this particular market affect the results of this exercise.
+	\item (Bonus) How does the above answer change with different values for the social cost of carbon? 
+	\item (Extra bonus) Can you write a function that helps you to compute this?
+		\end{enumerate}
+
+
+
+	
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
