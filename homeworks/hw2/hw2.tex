@@ -8,6 +8,7 @@
 \nobibliography*
 \usepackage[colorlinks, urlcolor=blue]{hyperref}
 \renewcommand{\arraystretch}{1.5}
+\usepackage{amsmath}
 \usepackage[nodisplayskipstretch]{setspace}
 \newenvironment{tight_itemize}{
 \begin{itemize}
@@ -23,7 +24,7 @@
 \begin{flushleft}
 Columbia University SIPA	
 
-Fall 2019
+Fall 2020
 
 \end{flushleft}
 
@@ -31,7 +32,7 @@ Fall 2019
 \begin{center}
 \textbf{Empirical Analysis of Energy Markets - U6616}
 
-Empirical Exercise 2
+Empirical Exercise 2 - Supply curve
 
 \end{center}
 
@@ -39,14 +40,11 @@ Empirical Exercise 2
 Prof. Ignacia Mercadal	
 \end{flushright}
 
-This problem set is due on \textbf{October 17th at 11:59pm}. Students are allowed to discuss with others, but each student must submit his or her own solution. Please submit the homework as an R notebook (if there are data files,  put the code and data files in a zip file). The code must run without errors. If there are errors, it will cost you 10 points and you will be given 24 hours to correct it, after which you will have to indicate clearly where was the error. 
+This problem set is due on October 26. I strongly recommend to start working on the homework early. You can work in pairs and submit a common solution. Please submit the homework as an R markdown file (if there are data files, they put all the files in a zip file). The code must run without errors. To make this easier, set the working directory at the beginning so it can be easily changed by someone else running the code. 
  
- 
-\begin{enumerate}
-	
-	\item (October 5) Go to the energy dataset provided by S\&P Global available \href{https://platform.mi.spglobal.com/web/client?auth=inherit#news/home}{here}.\footnote{If you don't have access using your Columbia email, send an email to the professor.} Go to Power/Generation Supply Curve and download the  dataset for one of the following ISOs:  MISO, PJM, ERCOT, or New England ISO, for either 2009 or 2018 (please sign up \href{https://docs.google.com/spreadsheets/d/1zkZpxXjbmGmKryrFiwYVkW4bj-pE-RdYL4CNSW-uaeE/edit?usp=sharing}{here} \textbf{before 10/4} so each student does a different dataset).\footnote{Notice you can only access this dataset from within campus. You can email S\&P support if you have any questions about the data, they usually respond quick. You can also email the TA or the professor.}
-		
-		 Select the following variables: 
+ For this exercise you will use a dataset collected by S\&P Global. Choose one of the datasets available, which have data for either 2009 or 2018 for one of the following ISOs: MISO, PJM, ERCOT, or New England ISO.  The goal of the exercise is to build the supply curve for a wholesale electricity market and to analyze how costs determine the composition of fuels and emissions. We will also use the exercise to see how things would change with a carbon tax.
+
+ Select the following variables from your dataset: 
 			\begin{itemize}
 			\item Plant Unit key
 			\item Primary fuel type
@@ -57,15 +55,17 @@ This problem set is due on \textbf{October 17th at 11:59pm}. Students are allowe
 			\item Emission allowances costs (this is part of the variable cost)
 			\item Fixed O\&M cost
 			\item Heat rate btu/ kwh
-			\item Heat input
+			\item Heat input (MMBTU)
 			\item Net generation MWh
 			\item Capacity factor
-			\item $NO_X$ Emissions Rate lbs MMBtu
-			\item $SO_2$ Emissions Rate lbs MMBtu
-			\item $CO_2$ Emissions Rate lbs MMBtu
+			\item $NO_X$ Emissions Rate (lbs/MMBtu)
+			\item $SO_2$ Emissions Rate (lbs/MMBtu)
+			\item $CO_2$ Emissions Rate (lbs/MMBtu)
 			\end{itemize}
-
 \clearpage
+\begin{enumerate}
+
+\item
 	Start by cleaning and understanding your data.
 	For this, do the following:
 	\begin{enumerate}
@@ -75,39 +75,53 @@ This problem set is due on \textbf{October 17th at 11:59pm}. Students are allowe
 	\item Describe each variable: what values does it take? Do you have any concerns about some variable (extreme values, missing values)?
 	\end{enumerate}
  
-	\item (October 5) Now let's look at the importance of each fuel in this market. 
+	\item Now let's look at the importance of each fuel in this market. 
 		\begin{enumerate}
-		\item What is the fuel composition of this market according to capacity (i.e. how much capacity for each fuel)? Show it in a pie chart.
+		\item What is the fuel composition of this market according to capacity (i.e. how much capacity for each fuel)? Show it in a pie chart.\footnote{Net generation is the amount of energy produced by a power plant, net of the energy used to produce. Basically, the amount of energy that comes out of the plant. Capacity is the maximum amount of energy  that a plant can produce in a given hour. For this reason, net generation is measured in MWh over a certain period and capacity in MW.}
+
 		\item What is the fuel composition of this market in terms of net generation? Show it in a pie chart.
 		\item Why are they different or similar?
+		\item How much does each fuel contribute to $NO_x$, $SO_2$, and $CO_2$ emissions? Choose an appropriate plot type to answer this.
 		\end{enumerate}
 
-\item (October 5) Organize the data and plot the generation supply curve using a different color for each fuel (reproduce the plot you can build online). For this, you have to order generators according to variable cost, and calculate the cumulative capacity of the system. Use geom\_point such that each plant is a dot, but do not connect the dots. Label the plot properly, add a title and a legend.
-	\begin{enumerate}
-	\item Are fuels ordered by cost? What do you think is the role of cost in explaining the differences between the capacity and net generation shares of each fuel?
-	\end{enumerate}
+\item Organize the data and plot the generation supply curve using a different color for each fuel (Check \href{https://www.eia.gov/todayinenergy/detail.php?id=7590}{here} for a reference about supply curves.). The idea is to have a plot in which each plant is a dot, its height is its variable cost and its x-coordinate is the capacity of the system at a cost equal or lower than the plant's. For this, you have to order generators according to variable cost, and calculate the cumulative capacity of the system. Use geom\_point such that each plant is a dot, but do not connect the dots. Label the plot properly, add a title and a legend.
+\item In the supply curve, are fuels ordered by cost? What do you think is the role of cost in explaining the differences between the capacity and net generation shares of each fuel?
 	
-\item (October 12) Now go to the same website and download load data for the same ISO and year. You can find this by going to Power/Regional Summary Statistics.
+\item  Now you will create three values that we will use to represent load. Let's assume average load is 60\% of capacity, winter peak is 80\% of capacity, and summer peak is 90\% of capacity.
 	\begin{enumerate}
-	\item  You will use three load values: summer peak, winter peak, and average load. To calculate average load, take the Actual Net Energy for Load (you can also use net energy from the power plant dataset you've been using so far), divide by the number of hours in a year ($365\times24$) and multiply by 1000 to go from GWh to MWh.
+	\item  Compute these three values of load.
 	\item Add the load values to the supply curve plot as vertical lines. Save this plot as a pdf file using \href{https://ggplot2.tidyverse.org/reference/ggsave.html}{ggsave}.
 	\item For each of these three load levels, find the price that would have cleared the market if price were equal to cost, i.e. find the point in the supply curve intersects the load curve (vertical line) in the plot.
 	\end{enumerate}
 	
+\item Suppose we want to know if the dispatch of power plants is efficient, i.e. if cheaper plants are dispatched first. Do cheaper power plants produce more? To check this, do the following:
+		\begin{enumerate}
+		\item Run an OLS regression of net generation on cost. What cost is the most relevant here? Try total cost and variable cost and argue why/how results vary with the cost definition. Briefly discuss.
+		\item Now control for capacity, how do results change?
+		\item What else could you be missing that may lead to bias? Can you control for it?	Add some control that you consider relevant and discuss how it changes the results. 
+		\end{enumerate}
 
-\item (October 12) Now you will calculate the profits that each generator would have made if the price had been the price you find assuming average load (the price on an average hour). 
+	
+
+\item (Extra credit)  Now you will calculate the profits that each generator would have made if the price had been the price you find assuming average load (the price on an average hour). 
 	\begin{enumerate}
 	\item First, calculate profits, which are given by $(P-mc)Q$. Use variable cost as marginal cost, quantity is net generation. Describe profits by fuel type. For this, create a table that includes minimum, percentile 25, mean, median, percentile 75, and max value for each fuel type (fuel types are rows).
 	\item Now compute total profits considering fixed costs $(P-mc)Q -F$, and create the same table as above. Do firms cover their costs?
 	\end{enumerate}
-\item (October 16) Now we will repeat the same exercise but with social cost instead of private cost.
+	
+\item (Extra credit) Now we will repeat the same exercise but with social cost instead of private cost.
 	\begin{enumerate}
 	\item 	We will use \$50 for the social cost of carbon, but write your code using it as a parameter such that you can easily change it (Define scc as a variable at the beginning, and use scc instead of the actual value in the code.  ). 
-	\item Compute the social variable cost for each generation. First, combine heat rate and $CO_2$ emissions rate to obtain $CO_2$ tons emitted per MWh. Then, multiply this value by the social cost of carbon.
+	\item Compute the social variable cost for each generation. First, combine heat rate, heat input, and $CO_2$ emissions rate to obtain $CO_2$ tons emitted per MWh. In the data we have the emission rates in lbs/MMBTU for $CO_2$. We also have the heat input in MMBTU.  Therefore, by multiplying both variables we can construct the emission in lbs.  Then, multiplying this variable by a constant $k=0.00045359237$ we can convert from lbs to tons. Finally, we know the generation in MWh. So, we can calculate the emissions in tons per MWh.
+	
+	 $CO_2 \enspace \text{Emissions rate}_i \enspace (tons/MWH) =$
+		\begin{equation*}
+			 \frac{\text{Emission rate}_i \enspace (lbs/MMBTU) \enspace \cdot \enspace \text{Heat input}_i \enspace (MMBTU) \enspace \cdot \enspace k \enspace (ton/lbs)}{Generation_i \enspace(MWh)}
+		\end{equation*}
 	\item Plot the social cost supply curve and load. Find the price that would clear if load was equal to average load (call this $P^S$), and the corresponding quantity. 
 	\end{enumerate}
 	
-	\item (October 16) Now we will compare total emissions in a world that dispatches plants according to private variable cost (as it is today), with a world in which plants are dispatched according to social cost (which would happen with a tax on carbon, for example).
+	\item (Extra credit) Now we will compare total emissions in a world that dispatches plants according to private variable cost (as it is today), with a world in which plants are dispatched according to social cost (which would happen with a tax on carbon, for example).
 	\begin{enumerate}
 	\item Calculate total emissions during an average hour assuming firms are dispatched according to social cost. For this, you have to follow these steps:
 		\begin{enumerate}
@@ -115,7 +129,7 @@ This problem set is due on \textbf{October 17th at 11:59pm}. Students are allowe
 		\item Create another variable with each plant's emissions assuming they produce at capacity (why capacity? Think of the supply curve). 
 		\item Then add up emissions for all plants that operate when the price is lower than or equal to $P^S$.
 		\end{enumerate}
-	\item Find total emissions for the case in which plants are dispatched according to private variable cost, not social cost, using the procedure above. Notice that now a plant operates if its variable cost is at or below the clearing price calculated in 4c.
+	\item Find total emissions for the case in which plants are dispatched according to private variable cost, not social cost, using the procedure above. Notice that now a plant operates if its variable cost is at or below the clearing price calculated in 5c.
 	\item How many tons could we save in an hour if the social cost of carbon were internalized? And in a day? And in a year? Comment about how the fuel shares of this particular market affect the results of this exercise.
 	\item (Bonus) How does the above answer change with different values for the social cost of carbon? 
 	\item (Extra bonus) Can you write a function that helps you to compute this?
