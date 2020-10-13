@@ -1,10 +1,4 @@
----
-title: "Recitation 5"
-output:
-  html_document:
-    df_print: paged
----
-```{r}
+```{r echo = TRUE, message = FALSE}
 # Load libraries at the top of the .Rmd
 library(tidyverse)
 library(readxl)
@@ -12,6 +6,12 @@ library(data.table)
 library(estimatr)
 library(stargazer)
 ```
+---
+title: "Recitation 5"
+output:
+  html_document:
+    df_print: paged
+---
 
 # Empirical Analysis of Energy Markets - U6616
 ## Empirical Exercise I - Data Exploration - Answer Key
@@ -29,7 +29,7 @@ Start at the [EIA Electric Power Annual](https://www.eia.gov/electricity/annual/
 
 I do this using code, but you could have just downloaded the excel files normally and put them in your R working directory (you figure this out by writing `getwd()`, or opening a new project in a particular folder) to complete this part. 
 
-```{r echo = TRUE}
+```{r echo = TRUE, warning = FALSE}
 
 # Put the urls in a variable
 urls <- c("https://www.eia.gov/electricity/annual/xls/epa_04_02_a.xlsx","https://www.eia.gov/electricity/annual/xls/epa_04_02_b.xlsx")
@@ -74,7 +74,7 @@ fnames <- c(download_file(urls[1]),download_file(urls[2]))
 ##### Describe each variable:
 Year is self-described, each of the other columns is the capacity in MW for each energy source. 
 
-```{r echo = FALSE}
+```{r echo = TRUE}
 # Load the files to R
 invisible(a <- read_excel(fnames[1], skip = 2, n_max = 12))
 invisible(b <- read_excel(fnames[2], skip = 4, n_max = 12))
@@ -130,7 +130,7 @@ Extra points for readable/converted units, and for x scale that doesn't have .5s
 
 Total capacity increases over time, From 2008 - 2012, in increases by about 50 GW, and from 2015 to 2018 it increases by about 35 GW. It stays about constant from 2012-2016.  The increases put together only constitute about 8% of the initial capacity. 
 
-```{r}
+```{r echo = TRUE}
 # Make the plot GW for more readability!
 plot1 <- ggplot(a , mapping = aes(x = Year, y = `Utility Total`/1000))+
   geom_line()+
@@ -215,7 +215,7 @@ There was some confusion about this filetype - T11.06 is in fact a csv/excel fil
 This question needs either a datatype description or a statistical description.  YYYYMM could be int, could be parsed to a date, or split into two ints. 
 
 
-```{r}
+```{r echo = TRUE}
  ##################
 # Emissions by year
 
@@ -231,7 +231,7 @@ summary(em)
 em
 ```
 
-```{r}
+```{r echo = TRUE}
 # Get the year and month by getting the quotient and remainder after dividing by 100
 em[, `:=`(year = YYYYMM%/%100, month =  YYYYMM%%100)]
 # Get the annual data which is coded as the 13th month in this dataset
@@ -261,7 +261,7 @@ ggplot(em_total, aes(x = year, y = `Total Emissions`/1000)) +
 #### Plot the share of emissions from the different sources over time. How has this changed? How do you relate this to what you observed in the previous question?
 Since 2005, natural gas has rapidly increased while coal has decreased.  This has meant that electricity generation has substituted coal emissions for natural gas emissions. We can't tell whether coal plants have totally been replaced or not yet, that's part 3 - is the drop in emissions due to coal being replaced by natural gas? or renewables? What proportion?
 
-```{r}
+```{r echo = TRUE}
 # Plot emissions over time by technology of generator
 ggplot(em, aes(x= year, y = Value/1000, fill = Description))+
   geom_area(position = 'stack') +
@@ -349,7 +349,7 @@ Concatenate
 
 The minimum dataset has Operating Year, Retirement Year, Nameplate Capacity (MW), and Technology. 
 
-```{r echo = TRUE}
+```{r echo = TRUE,warning = FALSE}
 
 # Read in the data after unzipping
 fname <- file.path(data_folder, "3_1_Generator_Y2019.xlsx")
@@ -678,13 +678,13 @@ stargazer(fit_1, se = starprep(fit_1), type = 'text')
 
 #### Does the previous regression capture the causal effect of coal capacity on carbon emissions? Why? If there is bias, do you expected to go in a particular direction? Explain.
 
-We do expect to see the effect of coal capacity on emissions, because we understand a causal mechanism through which capacity affects emissions - through generation. So the regression captures some causal effect.  The explanation of causality requires a mechanism, just because it's biased does not mean it's not causal. 
+We do expect the regression to capture *some* of the effect of coal capacity on carbon emissions.  Coal capacity affects emissions because it increases the theoretical maximum generation from coal. So, when capacity limits (or would otherwise limit) generation we expect it to have a direct impact on emissions, and we expect the regression to capture this causal mechanism. However, we don't know how big this effect is, because the causal effect is not identified; the coefficient is biased.
 
-On the other hand, *identification of the causal effect* does depend on bias. We call this 'establishing causality'. In this case, we have a bunch of other fuels which bias the result - other fuels like natural gas also produces emissions, and these also increase total emissions.  This means that the coefficient is upward biased (it is too high!).
+A source of upward bias might be from other fuels like natural gas that also produces emissions, these also increase total emissions because the regression not only estimates the impact of coal capacity but the correlation of natural gas capacity * coal capacity. 
 
 #### Are there any controls you could add to correct this problem? Explain. You don’t have to run more regressions, just to discuss how you would do it assuming you had access to typically available data.
 
-You could add a controls for all of the other fuels, fuel prices, demand etc for things that affect coal generation. 
+You could add controls for all of the other fuels, fuel prices, demand etc for things that affect coal generation that might not be orthogonal to coal capacity. An explanation for how it reduces bias was necessary
 
 
 
