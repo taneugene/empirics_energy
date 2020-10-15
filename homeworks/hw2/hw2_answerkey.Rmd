@@ -8,6 +8,7 @@ library(readr)
 library(readxl)
 library(tidyverse)
 ```
+
 ---
 title: "Empirical Exercise 2 Answer Key"
 author: Eugene Tan
@@ -37,21 +38,32 @@ For this exercise you will use a dataset collected by S&P Global. Choose one of 
 * SO2 Emissions Rate (lbs/MMBtu)
 * CO2 Emissions Rate (lbs/MMBtu)
 
-```{r}
-ercot2018 <- read_csv("data/ercot2018.csv")
-ercot2009 <- read_csv("data/ERCOT_2009.csv")
-ne2009 <- read_excel("data/ISO_NE_2009.xls")
-miso2018 <- read_csv("data/MISO2018.csv")
-ne2018 <- read_csv("data/NEISO_2018.csv")
-ny2018 <- read_csv("data/NYISO_2018.csv") 
-pjm2009 <- read_csv("data/PJM2009.csv", skip = 31)
+```{r echo = TRUE, warning = FALSE}
+ercot2018 <- fread("data/ercot2018.csv")
+ercot2009 <- fread("data/ERCOT_2009.csv")
+ne2009 <- read_excel("data/ISO_NE_2009.xls", 
+         col_types = c("text", "numeric", "numeric", 
+         "text", "text", "text", "text", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text"))
+ne2009 <- as.data.table(ne2009)
+miso2018 <- fread("data/MISO2018.csv")
+ne2018 <- fread("data/NEISO_2018.csv")
+ny2018 <- fread("data/NYISO_2018.csv") 
+pjm2009 <- fread("data/PJM2009.csv", skip = 31)
 alldata <- list(ercot2018, ercot2009,ne2009,miso2018,ne2018,ny2018, pjm2009)
 
 # Get a unique list of all the column names
 allcols <- unique(unlist(sapply(alldata, names)))
 # Map each of these to the variable name I want
-c('name','pkey','pukey','unitno','fueltype','tech','operating','capacity','capacity_adj','capacity_cum','cost_om',
-  'cost_fuel','')
+c('name','pkey','pukey','unitno','fueltype','tech','operating','capacity','capacity_adj','capacity_cum','vcost_om',
+  'vcost_fuel','vcost_om2','vcost_om3','vcost_emissions','fcost','tcost_om','heat_rate','heat_input','net_generation','cap_factor','nox','sox','co2','cogen','gscfuelsrc','gsc_
 
 ```
 
