@@ -88,9 +88,13 @@ On git bash (windows) or on terminal (mac)
 
 Edit this file in this folder. 
 
-* Diff
-* Add
-* Complete
+* `git status` checks the current status - relative to the last commit, what has changed, what has been staged, what is untracked?
+* `git log` checks the version history through time (if you added the aliases for lg1 and lg2, `git lg1` does the same thing)
+* `git diff` checks the differences between my current working directory and the last commit
+* `git diff hash_before hash_after` checks the differences between two commits
+* `git add filename` stages an edited file
+* `git commit -m "my commit message` commits with the commit message 'my commit message'
+* `git push` pushes to github. 
 
 ## Diff 
 
@@ -123,6 +127,8 @@ Configure others
 
 Get a list of your current setup
 `$ git config --list`
+
+## Some extra shortcuts to show the pretty logs I use above.
 
 Make an alias for git lg1 (from [here](https://stackoverflow.com/questions/1057564/pretty-git-branch-graphs))
 `$ git config --global alias.lg1 "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all"`
@@ -180,6 +186,16 @@ Intermediate way
 
 ![](../img/git_branches.png)
 
+
+## Tips
+
+* Set up your repo on github.
+* share your repo with your partner before you add anything
+* commit whenever you paste something in, 
+* commit before and after you get each thing working
+* commit often
+* push often
+* write informative commit messages
 
 
 
