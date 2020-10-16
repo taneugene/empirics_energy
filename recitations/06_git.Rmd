@@ -86,7 +86,7 @@ On git bash (windows) or on terminal (mac)
 
 ## Demonstration. 
 
-Edit this file in this foldr. 
+Edit this file in this folder. 
 
 * Diff
 * Add
