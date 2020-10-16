@@ -115,13 +115,20 @@ What is the difference between the status now and the last commit?
 Set your username
 `$ git config --global user.name "John Doe"`
 
-
 Set your email
 `$ git config --global user.email johndoe@example.com`
 
 Configure others
 `$ git config --global init.defaultBranch main`
+
+Get a list of your current setup
 `$ git config --list`
+
+Make an alias for git lg1 (from [here](https://stackoverflow.com/questions/1057564/pretty-git-branch-graphs))
+`$ git config --global alias.lg1 "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all"`
+
+Make an alias for git lg2
+`$ git config --global alias.lg2 "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all"`
 
 ## Cryptography (Setup is advanced)
 If you don't want to enter your github password every time, then set a key using [this link](https://docs.github.com/en/free-pro-team@latest/github/using-git/caching-your-github-credentials-in-git)
@@ -152,15 +159,20 @@ What happens if we make a change at the same time?
 
 What is the problem here?
 
+> I need to pull before I edit the file. Editing the file at the same time causes conflicts.
+
 ## Dealing with conflicts
 Easy way
 
 * look at my file and her file and manually sort out the diferences, commit that
+
 Intermediate way
 
 * Merge branches
 ![](../img/gitmerge.png)
-Advanced way
+
+
+## Advanced way
 * Rebasing
 ![](../img/gitrebase.png)
 
