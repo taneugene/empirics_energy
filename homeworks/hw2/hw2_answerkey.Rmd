@@ -181,46 +181,229 @@ much capacity for each fuel)? Show it in a pie chart.
 ```{r}
 
 for (name in names(alldata)){
+# Nest ggplots in print if your ggplots are on loop
   print(
     ggplot(dt[isoyear == name,.(capacity = sum(capacity, na.rm=T)), by = fueltype], aes(x = "",y = capacity, fill = fueltype)) + 
     geom_bar(stat="identity", width=1) +
     coord_polar("y", start=0)+
     ggtitle(name) + 
-    theme_void()+
-    geom_text(aes(y = ypos, label = fueltype), color = "white", size=6) +
-  scale_fill_brewer(palette="Set1")
+    theme_void()
+    # Want to find out how to add labels for capacity here.
+  )
+}
+
+```
+#### Part b
+(b) What is the fuel composition of this market in terms of net generation?
+Show it in a pie chart.
+
+```{r}
+
+for (name in names(alldata)){
+# Nest ggplots in print if your ggplots are on loop
+  print(
+    ggplot(dt[isoyear == name,.(net_generation = sum(net_generation, na.rm=T)), by = fueltype], aes(x = "",y = net_generation, fill = fueltype)) + 
+    geom_bar(stat="identity", width=1) +
+    coord_polar("y", start=0)+
+    ggtitle(name) + 
+    #ggsubtitle('Net Generation by Capacity by share of total')+
+    theme_void()
+    # Want to find out how to add labels for capacity here.
   )
 }
 
 ```
 
 
-
-(b) What is the fuel composition of this market in terms of net generation?
-Show it in a pie chart.
 (c) Why are they different or similar?
+This depends on the iso that students do, but the question of what is baseload and what are peaker plants and excess load plants will generally be accepted.
+
 (d) How much does each fuel contribute to NOx, SO2, and CO2 emissions? Choose an appropriate plot type to answer this.
+
+There are various ways to answer this:
+
+1. Take the emissions rate, multiply by net generation, and that's the actual total emissions for that ISO.  
+1. You could also just do a bar plot for each average emissions rate.
+  But this doesn't make sense or SO2 or NOx since they vary by plant. 
+- I would edit part 2b to clarify that we want the first. - calculate toal emissions in your ISO.
+
+```{r}
+# Set the groupby key
+setkey(dt, isoyear, fueltype) # Students should take out isoyear
+
+# Emissions by dataset - fueltype
+ggplot(dt[,.(emissions = sum(heat_input*co2, na.rm=T)), by = key(dt)],aes(x = factor(isoyear), y= emissions, fill = factor(fueltype))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + 
+  scale_y_continuous(name = "Emissions (lbs)") + 
+  scale_x_discrete(name = "ISO and year") + 
+  scale_fill_discrete(name = "Fuel Type")
+  
+
+for (name in names(alldata)){
+  print(
+    ggplot(dt[isoyear == name,.(emissions = sum(net_generation*co2, na.rm=T)), by = key(dt)],aes(x = factor(isoyear), y= emissions, fill = factor(fueltype))) + 
+  geom_bar(stat = 'identity', position = 'dodge') +
+  scale_y_continuous(name = "Emissions (lbs)") + 
+  scale_x_discrete(name = "Fuel type") + 
+  scale_fill_discrete(name = "Fuel Type") + 
+  ggtitle(paste(name,"- Emissions by fuel type"))
+  )
+}
+# Unnecessary data cleaning for the answer key. 
+if (F){
+  # Assume that if there is na generation, that no electricity was produced
+  dt[is.na(net_generation), net_generation:= 0] 
+  
+  # Checks which fuels have no emissions factors
+  dt[, mean(co2, na.rm=T), by = key(dt)]
+  dt[, mean(sox, na.rm=T), by = key(dt)]
+  dt[, mean(nox, na.rm=T), by = key(dt)]
+  
+  # Assume that renewable fuels are zero-emissions if they do not already have a value assigned.
+  renewables <- c('Solar','Uranium','Water','Wind')
+  dt[is.na(co2) & fueltype %in% renewables, co2 := 0.]
+  dt[is.na(nox) & fueltype %in% renewables, nox := 0.]
+  dt[is.na(sox) & fueltype %in% renewables, sox := 0.]
+  
+  # This is a reasonable but potentially bad assumption if the distribution of emisssions factors is skewed/fat-tailed, but I will set the nas for other emissions factors to be the mean or max of the distribution
+  dt[is.na(nox), nox := mean(nox, na.rm = T), by = c('fueltype','tech')]
+  
+  summary(dt)
+}
+```
+
 3. Organize the data and plot the generation supply curve using a different color for each fuel (Check here for a reference about supply curves.). The idea is to have a plot in which each plant is a dot, its height is its variable cost and its x- coordinate is the capacity of the system at a cost equal or lower than the plant’s. For this, you have to order generators according to variable cost, and calculate the cumulative capacity of the system. Use geom point such that each plant is a dot, but do not connect the dots. Label the plot properly, add a title and a legend.
+
+```{r}
+# The vcost_fuel is a component o fthe the operating cost, we see here that it never goes above the x = y line. 
+ggplot(dt, aes(x = vcost_om, y = vcost_fuel)) + 
+  geom_point()
+
+# Order generators according to variable cost
+setorder(dt, isoyear, vcost_om)
+
+# calculate the cumulative capacity of the system
+dt[, cum_capacity := cumsum(capacity), by = isoyear]
+
+# Draw the supply curve for all ISOs.
+ggplot(dt, aes(x = cum_capacity, y = vcost_om, color = isoyear)) + 
+  geom_point() + 
+  xlab("Cumulative Summer Capacity (MW)")+ 
+  ylab("Variable Cost ($/MWh)")
+
+scs <- list()
+# Draw the supply curve by iso using a different color for each uel. 
+for (name in names(alldata)){
+  scs[[name]] <-ggplot(dt[isoyear == name], aes(x = cum_capacity, y = vcost_om, color = fueltype)) + 
+    geom_point() + 
+    xlab("Cumulative Summer Capacity (MW)")+ 
+    ylab("Variable Cost ($/MWh)")+
+    ggtitle(paste(name, "Supply Curve"))
+}
+scs
+```
+
 4. In the supply curve, are fuels ordered by cost? What do you think is the role of cost in explaining the differences between the capacity and net generation shares of each fuel?
+
+Fuels are ordered by variable cost, not total cost. The higher the variable cost is, the lower the capacity factor should be (this is net generation over total theoretical generation, which scales with capacity).
+
 5. Now you will create three values that we will use to represent load. Let’s assume average load is 60% of capacity, winter peak is 80% of capacity, and summer peak is 90% of capacity.
 (a) Compute these three values of load.
+
+```{r}
+load <- dt[, .(total_capacity = max(cum_capacity)), by = isoyear]
+load[,`:=`(avg_load = .6*total_capacity, winter_peak = .8*total_capacity,summer_peak = .9*total_capacity)]
+load
+```
 (b) Add the load values to the supply curve plot as vertical lines. Save this plot
-as a pdf file using ggsave.
- For each of these three load levels, find the price that would have cleared the market if price were equal to cost, i.e. find the point in the supply curve intersects the load curve (vertical line) in the plot.
+as a pdf file using ggsave. For each of these three load levels, find the price that would have cleared the market if price were equal to cost, i.e. find the point in the supply curve intersects the load curve (vertical line) in the plot.
+
+```{r}
+# Draw the supply curve by iso using a different color for each fuel. 
+for (name in names(scs)){
+  scs[[name]] <- scs[[name]] + 
+    geom_vline(xintercept = load[isoyear ==name, avg_load])+
+    geom_vline(xintercept = load[isoyear ==name, winter_peak])+
+    geom_vline(xintercept = load[isoyear ==name, summer_peak])
+  ggsave(paste("supplycurve", name, ".pdf", sep = ""), device = "pdf", width = 16, height = 9, units = "in")
+}
+scs
+```
+
+
 6. Suppose we want to know if the dispatch of power plants is efficient, i.e. if cheaper plants are dispatched first. Do cheaper power plants produce more? To check this, do the following:
 (a) Run an OLS regression of net generation on cost. What cost is the most relevant here? Try total cost and variable cost and argue why/how results vary with the cost definition. Briefly discuss.
+
+```{r}
+dt[, tcost_om := vcost_om * net_generation]
+dt[, tcost_fuel := vcost_fuel * net_generation]
+dt[, tcost_emissions := vcost_emissions * net_generation]
+ds <- dt[isoyear == "ercot2009"]
+
+# Naive regression, noting that vcost_fuel is collinear with vcost_om
+model1 <- lm("net_generation ~ vcost_om +vcost_fuel + vcost_emissions + fcost", ds)
+summary(model1)
+
+# Same using total variable costs as in the question rather than 
+model2 <- lm("net_generation ~ tcost_om +tcost_fuel +tcost_emissions + fcost", ds)
+summary(model2)
+
+model3 <- lm("net_generation ~ tcost_fuel +tcost_emissions + fcost", ds)
+summary(model3)
+```
+
 (b) Now control for capacity, how do results change?
+```{r}
+# Naive regression, noting that vcost_fuel is collinear with vcost_om
+model4 <- lm("net_generation ~ vcost_om +vcost_fuel + vcost_emissions + fcost + capacity", ds)
+summary(model4)
+
+# Same using total variable costs as in the question rather than 
+model5 <- lm("net_generation ~ tcost_om +tcost_fuel +tcost_emissions + fcost +capacity", ds)
+summary(model5)
+
+model6 <- lm("net_generation ~ tcost_fuel +tcost_emissions + fcost +capacity", ds)
+summary(model6)
+```
+
 (c) What else could you be missing that may lead to bias? Can you control for it? Add some control that you consider relevant and discuss how it changes the results.
 
+We are looking at the effect of cost on generation, one thing we could be missing is the generator type and how long the generator takes to start and shut down. We can proxy for that by adding a dummy for generator type.
+
+```{r}
+
+```
 
 
 
 
 
+7. (Extra credit) Now you will calculate the profits that each generator would have made if the price had been the price you find assuming average load (the price on an average hour).
+(a) First, calculate profits, which are given by (P − mc)Q. Use variable cost as marginal cost, quantity is net generation. Describe profits by fuel type. For this, create a table that includes minimum, percentile 25, mean, median, percentile 75, and max value for each fuel type (fuel types are rows).
 
 
 
 
+(b) Now compute total profits considering fixed costs (P −mc)Q−F, and create the same table as above. Do firms cover their costs?
+8. (Extra credit) Now we will repeat the same exercise but with social cost instead of private cost.
+(a) We will use $50 for the social cost of carbon, but write your code using it as a parameter such that you can easily change it (Define scc as a variable at the beginning, and use scc instead of the actual value in the code. ).
+(b) Compute the social variable cost for each generation. First, combine heat rate, heat input, and CO2 emissions rate to obtain CO2 tons emitted per MWh. In the data we have the emission rates in lbs/MMBTU for CO2. We also have the heat input in MMBTU. Therefore, by multiplying both variables we can construct the emission in lbs. Then, multiplying this variable by a constant k = 0.00045359237 we can convert from lbs to tons. Finally, we know the generation in MWh. So, we can calculate the emissions in tons per MWh.
+CO2 Emissions ratei (tons/MWH) =
+Emission ratei (lbs/MMBTU) · Heat inputi (MMBTU) · k (ton/lbs)
+Generationi (M W h)
+
+(c) Plot the social cost supply curve and load. Find the price that would clear if load was equal to average load (call this P S ), and the corresponding quantity.
+9. (Extra credit) Now we will compare total emissions in a world that dispatches plants according to private variable cost (as it is today), with a world in which plants are dispatched according to social cost (which would happen with a tax on carbon, for example).
+(a) Calculate total emissions during an average hour assuming firms are dispatched according to social cost. For this, you have to follow these steps:
+i. Create variable that indicates whether a plant operates or not in an average hour (it operates if its social cost is lower than or equal to PS).
+ii. Create another variable with each plant’s emissions assuming they
+produce at capacity (why capacity? Think of the supply curve).
+iii. Then add up emissions for all plants that operate when the price is lower
+than or equal to PS.
+(b) Find total emissions for the case in which plants are dispatched according to private variable cost, not social cost, using the procedure above. Notice that now a plant operates if its variable cost is at or below the clearing price calculated in 5c.
+(c) How many tons could we save in an hour if the social cost of carbon were internalized? And in a day? And in a year? Comment about how the fuel shares of this particular market affect the results of this exercise.
+(d) (Bonus) How does the above answer change with different values for the social cost of carbon?
+(e) (Extra bonus) Can you write a function that helps you to compute this?
 
 
 
