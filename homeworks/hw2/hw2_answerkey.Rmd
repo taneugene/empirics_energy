@@ -354,8 +354,9 @@ Now you will create three values that we will use to represent load. Let’s ass
 ```{r}
 
 load <- dt[, .(total_capacity = max(cum_capacity)), by = isoyear]
+# Data table v1
 load[,`:=`(avg_load = .6*total_capacity, winter_peak = .8*total_capacity,summer_peak = .9*total_capacity)]
-
+# Data table v2
 load[,avg_load := .6*total_capacity]
 load[,winter_peak := .8*total_capacity]
 load[,summer_peak := .9*total_capacity]
@@ -386,6 +387,7 @@ For each of these three load levels, find the price that would have cleared the 
 # Set up the merge
 setkey(load, isoyear)
 setkey(dt, isoyear)
+
 # join the loads to the data table
 dt <- merge(dt, load)
 
@@ -406,6 +408,8 @@ for (name in names(alldata)){
   # Get the 1st one with higher than average load
   breakeven[[name]] <- dt[isoyear == name][dt[isoyear == name, (cum_capacity > avg_load)]][1]
 }
+
+breakeven
 breakeven<- rbindlist(breakeven)
 breakeven[, price := vcost_om]
 
@@ -434,10 +438,25 @@ dt[, tcost_om := vcost_om * net_generation + fcost *capacity * 1000]
 dt[, tcost_fuel := vcost_fuel * net_generation+ fcost *capacity *1000 ]
 dt[, tcost_emissions := vcost_emissions * net_generation+ fcost *capacity*1000]
 
+
 # Naive regression, noting that vcost_fuel is collinear with vcost_om
 model1 <- lm("net_generation ~ vcost_om  + fcost + isoyear", dt)
 summary(model1)
 # Answers depend on ISO.  
+library(lfe)
+library(plm)
+
+
+
+
+# How to use the felm function:
+# first part: formula without fixed effects
+# second part: fixed effects
+# third part: IV specification (write 0 if not using an IV)
+# fourth part: level at which to cluster the standard errors
+# This function allows to clustered standard errors at a level different from the fixed effects.
+dt[, isoyear := as.factor(isoyear)]
+#felm("net_generation ~ vcost_om  + fcost | isoyear", dt)
 
 # Same using total variable costs as in the question rather than 
 model2 <- lm("net_generation ~ tcost_om  + fcost + isoyear", dt)
@@ -471,11 +490,12 @@ unique(dt[,.(tech, fueltype)])
 
 dispatchable_techs = c('Hydro','Steam Turbine','Combustion Turbine', 'Combined Cycle', 'Internal Combustion','Pumped Storage')
 intermittent_techs = c('Solar','Wind')
-
+# dt <- dt[!is.na(net_generation)]
 dt[,dispatchable := 0]
 dt[,intermittent := 0]
 dt[tech %in% dispatchable_techs, dispatchable := 1]
 dt[tech %in% intermittent_techs, intermittent := 1]
+
 
 # Intermittency and dispatchability dummies
 summary(lm("net_generation ~ vcost_om + fcost + intermittent+ dispatchable + isoyear", dt))
@@ -494,13 +514,15 @@ summary(lm("net_generation ~ vcost_om + fcost + fueltype +  tech + isoyear", dt)
 ```{r}
 
 # Merge in the prices. 
-dt <- merge(dt, dt_price[,.(isoyear, p_avg_load, p_winter_peak, p_summer_peak)])
+# setkey(dt_price, isoyear)
+dt <- merge(dt, dt_price[,.(isoyear, p_avg_load, p_winter_peak, p_summer_peak)], by = 'isoyear')
 
 dt[, profits := (p_avg_load - vcost_om)*net_generation]
 
 # Ge tthe profits grouping over isoyear and fueltype, (not filtering for na net_generation causes bugs)
 #https://stackoverflow.com/questions/25928708/using-summary-function-inside-data-table
 dt[!is.na(net_generation), as.list(summary(profits, na,rm)),.(isoyear, fueltype)]
+
 ```
 
 #### Part b)
@@ -520,7 +542,7 @@ profits
 (a) We will use $50 for the social cost of carbon, but write your code using it as a parameter such that you can easily change it (Define scc as a variable at the beginning, and use scc instead of the actual value in the code. ).
 
 ```{r}
-scc <- 10
+scc <- 50
 ```
 
 (b) Compute the social variable cost for each generation. First, combine heat rate, heat input, and CO2 emissions rate to obtain CO2 tons emitted per MWh. In the data we have the emission rates in lbs/MMBTU for CO2. We also have the heat input in MMBTU. Therefore, by multiplying both variables we can construct the emission in lbs. Then, multiplying this variable by a constant k = 0.00045359237 we can convert from lbs to tons. Finally, we know the generation in MWh. So, we can calculate the emissions in tons per MWh.
@@ -535,6 +557,7 @@ dt[,tco2_mwh := co2 * 0.00045359237 * heat_rate/1000] # heat rate is btu/kwh
 dt[is.na(tco2_mwh), tco2_mwh:=0]
 dt[, external_cost_co2  := tco2_mwh*(scc)] # $/MWh since scc is $/tco2, and co2 is tco2/Mwh
 dt[, social_cost := vcost_om + external_cost_co2]
+
 ```
 
 (c) Plot the social cost supply curve and load. Find the price that would clear if load was equal to average load (call this P S ), and the corresponding quantity.
@@ -601,28 +624,36 @@ part9
 Depends on the market. Fuel shares by market basically determine how the merit order changes with the CO2 tax.  Savings can be very large (e.g. ERCOT) or small (NEISO), depedning on how much fossil fuels that are marginal to thte tax. 
 ```{r}
 part9[,co2_savings := co2ph_private-co2ph_social]
-part9[,co2_savings_annual := co2_savings * 365]
+part9[,co2_savings_annual := co2_savings * 24 *365]
 part9
 ```
 
 (d) (Bonus) How does the above answer change with different values for the social cost of carbon?
 
 There should be more CO2 savings for a higher SCC. The larger the tax, the more fossil fuel plants that will be marginal. 
+
 (e) (Extra bonus) Can you write a function that helps you to compute this?
 
 NY and NE ISO have weird non-monotonically increasing results
 
 ```{r}
+scc
 co2_savings <- function(scc, dt = dt){
+  # Calculate the social cost at the new SCC
   dt[, social_cost := vcost_om + tco2_mwh*scc]
+  # Then order power plants in order of social cot
   setorder(dt, social_cost)
+  # Find cumulative capacity
   dt[, cum_capacity_sc := cumsum(capacity), isoyear]
+  # Reset the data table
   dt[, p_s := NULL]
+  # Calculate Price
   dt <- merge(dt, dt[cum_capacity_sc>avg_load, .(p_s = min(social_cost)), isoyear])
+  # Calculate Emissions
   dcast(dt[social_cost<p_s, .(co2ph = sum(tco2_mwh*capacity, na.rm= T), scc = paste0('co2ph',scc)), isoyear],"isoyear ~ scc", value.var = "co2ph")
 }
 
-emissions <- Reduce(merge, lapply(0:20*2, co2_savings, dt = dt))
+emissions <- Reduce(merge, lapply(0:20*5, co2_savings, dt = dt))
 emissions
 
 # Savings
