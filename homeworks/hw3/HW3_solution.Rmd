@@ -1,0 +1,345 @@
+---
+title: "HW 3 solution"
+author: "Ignacia Mercadal"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r Initial setup}
+rm(list=ls())
+library(data.table)
+library(lubridate)
+library(stargazer)
+library(plm)
+library(lmtest)
+library(sandwich)
+library(ggplot2)
+library(lfe)
+```
+
+
+1. First. load the data from file data_panel.csv
+
+```{r Data}
+data <- read.csv("./data_panel.csv",
+                 stringsAsFactors = F)
+data <- data.table(data)
+```
+
+2. Do some preliminary data cleaining. To deal with dates, I recommend the package lubridate.
+
+```{r Preliminary data cleaning}
+#####  Data cleaning
+setnames(data, "capacity_design_mwe", "capacity")
+data[, capacity_factor := capacity_factor*100]
+data[, year := as.numeric(year)]
+
+## Make date and age variables
+data[, date := ymd(paste(year, month,1, sep="-")) ]
+data[, dateoper := mdy(commercial_operation)]
+
+data[, age := as.numeric(date-dateoper)/365]
+data[, age3 := age^3]
+data[, yearoper := year(dateoper)]
+
+## Create a variable for the month of divestiture
+data[, divestdate := mdy(divest_date)]
+data[,divestmonth := ymd(paste(year(divestdate), month(divestdate), 1, sep="-"))]
+data[, ever_divest := 1]
+data[is.na(divestdate), ever_divest := 0]
+data[, ever_divest := as.factor(ever_divest)]
+
+## Make a variable for the date in months
+data[, yearmonth := ymd(paste(year, month, '01', sep="-"))]
+
+## Create indicators for type and manufacturer
+
+data[, typePWR := 0]
+data[pwr_bwr == 'PWR', typePWR := 1]
+data[, typePWR := (pwr_bwr == 'PWR')*1 ]
+data[, typeBWR := 0]
+data[pwr_bwr == 'BWR', typeBWR := 1]
+
+data[, manuf_west := 0]
+data[manufacturer == "WEST", manuf_west := 1]
+data[, manuf_ge := 0]
+data[manufacturer == "GE", manuf_ge := 1]
+data[, manuf_ce := 0]
+data[manufacturer == "CE", manuf_ce := 1]
+data[, manuf_bw := 0]
+data[manufacturer == "B&W", manuf_bw := 1]
+
+data[, regionNE := 0]
+data[censusregion %in% c("MAT", "NEW"), regionNE := 1]
+data[, regionMW := 0]
+data[censusregion %in% c("WNC", "ENC"), regionMW := 1]
+data[, regionSO := 0]
+data[censusregion %in% c("WSC", "ESC", "SAT"), regionSO := 1]
+data[, regionWE := 0]
+data[censusregion %in% c("PACC", "MTN"), regionWE := 1]
+
+
+### Reactor and plant fixed effects
+data[ , reactor_id := .GRP, by = reactor_name]
+data[, reactor_id := as.factor(reactor_id)]
+data[ , plant_id := .GRP, by = facilityname]
+data[, plant_id := as.factor(plant_id)]
+
+saveRDS(data, "data_clean.Rds")
+
+```
+3. Now you will compute some summary statistics and compare divested and non divested plants.
+
+a. Compute the share of total capacity that has been divested (using the dummy divested) every year. For this, notice that you have monthly data but capacity does not change so you may want to restrict your sample to e.g. December. Alternatively, you can compute the mean.
+
+```{r 3.a sum stats}
+data[month==12, tot_cap_y := sum(capacity, na.rm=T), by = year]
+tab <- data[divested==1 & month == 12, round(sum(capacity, na.rm=T)/unique(tot_cap_y),2), by = year]
+setnames(tab, c("year", "share_divested"))
+tab
+
+```
+
+
+b. How does the capacity factor vary over time?
+
+```{r 3b}
+## 3b
+tab <- data[, mean(capacity_factor, na.rm=T), by =  year]
+tab[order(year)]
+
+## Alternatively
+ggplot(tab, aes(x=year,y=V1)) + geom_line()
+
+```
+
+
+c. How does the capacity factor vary over time for divested and non-divested plants (After 1999)?
+
+```{r 3.c Sum stats }
+## 3c
+tab <- data[year>=1999, mean(capacity_factor, na.rm=T), by = list(year,divested)]
+tab[order(year)]
+
+## Alternatively
+ggplot(tab, aes(x=year, y=V1, colour = as.factor(divested))) +  geom_line() +
+  xlab("Capacity factor") + ylab("Year") + 
+  ggtitle("Capacity factor over time") +
+  scale_color_manual(values=c('dark blue','dark red'),name="Divested",
+                         breaks=c("1", "0"),
+                         labels=c("Yes", "No"))
+```
+Notice that this plot is different from Figure 1 because it uses the "divested"" dummy instead of "ever divested". Therefore, it provides different information.
+
+
+4. Reproduce Figure 1 in the paper. For this, you have to first aggregate the data to a yearly level (instead of monthly) by computing the mean capacity factor for each year separately for the two groups (never divested and ever divested). Plot the number of operating reactors in a different panel (not in the same graph as in the paper). Make sure you label everything properly.
+
+```{r Figure 1}
+data[, nplants := uniqueN(reactor_id), by = year]
+
+data_plot <- data[, mean(capacity_factor, na.rm=T), by = list(year, ever_divest)]
+
+ggplot(data_plot) +
+  geom_line(aes(x=year, y= V1, linetype=ever_divest)) +
+  xlab("Capacity factor") + ylab("Year") + 
+  ggtitle("Capacity factor over time") +
+  scale_color_manual(name="Ever divested",
+                         breaks=c("1", "0"),
+                         labels=c("Yes", "No"))
+  
+```
+
+5. Reproduce Table 2, except for the specification in which observations are weighted by reactor capacity, and answer the following questions:
+
+```{r Table 2}
+pdata <- pdata.frame(data, c("reactor_id", "yearmonth"))
+
+r1 <- plm(capacity_factor ~ divested + as.factor(yearmonth), model = "pooling", pdata)
+#coeftest(r1, vcov=vcovHC(r1,  cluster = "group"))
+
+r2 <- plm(capacity_factor ~ divested + as.factor(yearmonth), model = "within", pdata)
+#coeftest(r2, vcov=vcovHC(r2, cluster = "group"))
+
+r3 <- plm(capacity_factor ~ divested + as.factor(yearmonth) + age3, model = "within", pdata)
+#coeftest(r3, vcov=vcovHC(r3, cluster = "group"))
+
+data2 <- copy(data[, list(capacity_factor, yearmonth, year, plant_id, age3, reactor_id, divested)])
+data2[, capacity_factor := mean(capacity_factor), by = list(plant_id, yearmonth)]
+data2[, age3 := mean(age3), by = list(plant_id, yearmonth)]
+data2 <- unique(data2, by = c("plant_id", "yearmonth"))
+pdata2 <- pdata.frame(data2, c("plant_id", "yearmonth"))
+r4 <- plm(capacity_factor ~ divested + as.factor(yearmonth) + age3,  model = "within", pdata2)
+#coeftest(r4, vcov=vcovHC(r4, cluster = "group"))
+length(unique(data2[,plant_id]))
+stargazer(r1, r2, r3, r4, type = 'text', omit = c("yearmonth"))
+
+## Not first order to make it look exactly like the one on the paper, my focus was mostly on the results. But in case:
+
+stargazer(r1, r2, r3, r4, type = 'text', omit = c("yearmonth", "age", "Constant"), 
+          se = list(sqrt(diag(vcovHC(r1,  cluster = "group"))), sqrt(diag(vcovHC(r2,  cluster = "group"))), sqrt(diag(vcovHC(r3,  cluster = "group"))),
+                    sqrt(diag(vcovHC(r4,  cluster = "group")))),
+          add.lines = list(c("Month-of-sample FE", "Yes", "Yes", "Yes", "Yes"),
+                           c("Reactor FE", "No", "Yes", "Yes", "Yes"),
+                           c("Reactor age (cubic)", "No", "No", "Yes", "Yes"),
+                           c("Obs weighted by reactor capacity", "No", "No", "No", "No"),
+                           c("Data collapsed to plant level", "No", "No", "No", "Yes"),
+                           c("Number of cross sectional units", "103", "103", "103", "65")),
+          omit.stat=c("adj.rsq","f"))
+
+
+
+
+
+
+```
+
+The standard errors are smaller than otherwise because they are not clustered at the plant level, but at the reactor level. The easiest way to do it at the plant level is to use the function feln of the package lfe to run the regressions
+
+```{r}
+##### A second alternative: use package felm from package lfe ######
+
+# How to use the felm function:
+# first part: formula without fixed effects
+# second part: fixed effects
+# third part: IV specification (write 0 if not using an IV)
+# fourth part: level at which to cluster the standard errors
+# This function allows to clustered standard errors at a level different from the fixed effects.
+
+
+r12 <- felm(capacity_factor ~ divested | as.factor(yearmonth) | 0 | plant_id, data)
+#summary(r12)
+
+r22 <- felm(capacity_factor ~ divested | as.factor(yearmonth) + reactor_id | 0 | plant_id, data)
+#summary(r22)
+
+r32 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, data)
+
+
+data2 <- copy(data[, list(capacity_factor, yearmonth, year, plant_id, age3, reactor_id, divested)])
+data2[, capacity_factor := mean(capacity_factor), by = list(plant_id, yearmonth)]
+data2[, age3 := mean(age3), by = list(plant_id, yearmonth)]
+data2 <- unique(data2, by = c("plant_id", "yearmonth"))
+r42 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + plant_id | 0 | plant_id, data2)
+
+
+## Not first order to make it look exactly like the one on the paper, my focus was mostly on the results. But in case:
+
+stargazer(r12, r22, r32, r42, type = 'text',  
+          add.lines = list(c("Month-of-sample FE", "Yes", "Yes", "Yes", "Yes"),
+                           c("Reactor FE", "No", "Yes", "Yes", "Yes"),
+                           c("Reactor age (cubic)", "No", "No", "Yes", "Yes"),
+                           c("Obs weighted by reactor capacity", "No", "No", "No", "No"),
+                           c("Data collapsed to plant level", "No", "No", "No", "Yes"),
+                           c("Number of cross sectional units", "103", "103", "103", "65")),
+          omit.stat=c("adj.rsq","f", "ser"))
+
+
+
+
+```
+
+
+(a) What do the plant fixed effects do? How can you interpret the different results with and without plant fixed effects?
+
+The plant fixed effects control for variation across plants that is time-invariant. For instance, some plants may have higher capacity factors than others even before deregulation. The coefficients are bigger after including plant fixed effects, indicating that some unobserved factor that varied across plants but not plants was introducing bias into the results. 
+
+(b) What happens if you do not include month year fixed effects? How do you interpret this?
+
+```{r}
+rb <- felm(capacity_factor ~ divested  | 0  | 0 | plant_id, data)
+summary(rb)
+```
+
+The coefficient is much larger without the month-year fixed effects. When they are included, the coefficient on divested is biased because part of the variation that it captures comes from a general trend towards higher capacity factor and is not due to divestiture.
+
+Notice that you should cluster the standard errors at the plant level.
+
+
+6. Reproduce Table 1. Are the two groups different or similar? How does this matter for the causal interpretation of the estimated coefficients?
+
+```{r 6 Table 1}
+
+testf.div <- function(v,ed){
+  t <- t.test(v[ed==1], v[ed==0])
+  ret <- data.table(t(round(t$estimate,1)), round(t$p.value,2))
+  setnames(ret, c("Mean divested", "Mean others", "p-value"))
+  return(ret)
+}
+
+data[year==1998, nreact_owner := uniqueN(reactor_name) , by = list(operatorname)]
+
+
+tab <- lapply(data[year == 1998  & month(date) == 12, list(capacity, age,nreact_owner,typePWR, typeBWR,manuf_west,manuf_ge,manuf_ce,manuf_bw,
+                                                           regionNE, regionMW, regionSO, regionWE)],
+              testf.div, ed =data[year == 1998  & month(date) == 12, ever_divested] )
+tab <- rbindlist(tab)
+tab[,variable := c("Capacity", "Age", "Number of reactors by operator","Pressurized water reactor", "Boiling water reactor", "Westinghouse", "General Electric", "Combustion Engineering", "Babcock and Wilcox", "Northeast census region", "Midwest census region", "South census region",
+                   "West census region")]
+setcolorder(tab, c("variable", "Mean divested", "Mean others" ,  "p-value" ))
+tab
+
+
+```
+
+
+7. What happens if you answer this question using only data on the divested generators? And if your sample compares divested and non-divested plants after 2002? Run these regressions and interpret the results. What’s the advantage of the strategy used in the paper compared to these two?
+
+```{r Question 7}
+r12d <- felm(capacity_factor ~ divested | as.factor(yearmonth) | 0 | plant_id, data[ever_divest==1])
+#summary(r12)
+
+r22d <- felm(capacity_factor ~ divested | as.factor(yearmonth) + reactor_id | 0 | plant_id, data[ever_divest==1])
+#summary(r22)
+
+r32d <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, data[ever_divest==1])
+
+stargazer(r12d, r22d, r32d, type = 'text',  
+          add.lines = list(c("Month-of-sample FE", "Yes", "Yes", "Yes", "Yes"),
+                           c("Reactor FE", "No", "Yes", "Yes", "Yes"),
+                           c("Reactor age (cubic)", "No", "No", "Yes", "Yes"),
+                           c("Obs weighted by reactor capacity", "No", "No", "No", "No"),
+                           c("Data collapsed to plant level", "No", "No", "No", "Yes"),
+                           c("Number of cross sectional units", "103", "103", "103", "65")),
+          omit.stat=c("adj.rsq","f", "ser"))
+
+
+```
+
+The results are overall similar, though slightly larger. In this case, we are only using the sample of generators that were ever divested. As a result, this assumes that any change between before and after divestiture is due to divestiture. By contrast, doing the dif-in-dif with the never divested plants as a control assumes that there are common trends between these two groups, but they can be unrelated to divestiture. We see that failing to include the control groups leads to a slight positive bias.
+
+8. (for extra points) Reproduce Table 2 and interpret the results.
+
+This question was supposed to ask to replicate Table 3, but I'll accept it as correct if you replicated either Table 2 or Table 3.
+
+```{r Question 8}
+r81 <- felm(capacity_factor ~ divested | as.factor(yearmonth) | 0 | plant_id, data)
+
+r82 <- felm(capacity_factor ~ divested | as.factor(yearmonth) + reactor_id | 0 | plant_id, data)
+#summary(r22)
+
+r83 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, data)
+
+r84 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, data, weights = data[,capacity])
+
+data2 <- copy(data[, list(capacity_factor, yearmonth, year, plant_id, age3, reactor_id, divested)])
+data2[, capacity_factor := mean(capacity_factor), by = list(plant_id, yearmonth)]
+data2[, age3 := mean(age3), by = list(plant_id, yearmonth)]
+data2 <- unique(data2, by = c("plant_id", "yearmonth"))
+r85 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + plant_id | 0 | plant_id, data2)
+
+
+## Not first order to make it look exactly like the one on the paper, my focus was mostly on the results. But in case:
+
+stargazer(r81, r82, r83, r84, r85, type = 'text',  
+          add.lines = list(c("Month-of-sample FE", "Yes", "Yes", "Yes", "Yes", "Yes"),
+                           c("Reactor FE", "No", "Yes", "Yes", "Yes", "Yes"),
+                           c("Reactor age (cubic)", "No", "No", "Yes", "Yes", "Yes"),
+                           c("Obs weighted by reactor capacity", "No", "No", "No", "Yes" ,"No"),
+                           c("Data collapsed to plant level", "No", "No", "No","No", "Yes"),
+                           c("Number of cross sectional units", "103", "103", "103","103", "65")),
+          omit.stat=c("adj.rsq","f", "ser"))
+
+```
+
+
