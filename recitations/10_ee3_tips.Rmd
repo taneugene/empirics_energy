@@ -1,0 +1,131 @@
+---
+title: "Recitation 10"
+author: "Eugene Tan (TA)"
+date: "11/13/2020"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## This class
+
+* Some comments on HW2
+  * how to google
+  * data.table
+* Date handling
+  * lubridate
+* Fixed Effects models
+  * plm
+  * lfe
+
+## HW2 - how to google
+
+Always google with "data.table R thing_you_want_to_google"
+* Tidyverse vs data.table
+  * because most R users use tidyverse, googling will normally by default give you tidyverse results
+  * we've been teaching data.table in this class
+  * NOT COMPATIBLE - running a tidyverse operation on a data.table means you have to use as.data.table again
+  * Multiple versions because people wanted different ways of doing abstract things
+* Pdata (from plm) is another type of dataframe like tibbles (tidyverse), data.table.
+
+## Data.table
+[i,j, by]
+* i filters or selects a subset of data (by rows) that you want
+* j selects or does operations on multiple columns
+* by does things on different categories of the data. 
+
+## Lubridate converts strings to POSIXct
+```{r echo = TRUE}
+library(lubridate)
+# Change STRINGS to dates
+dmy("20-08-2008")
+mdy("08/20/2008")
+ymd("200820")
+dmy("200820")
+ymd("20.12.11")
+ymd("2020 November 4th")
+mdy('Nov 4 2020')
+mdy('Nov042020')
+```
+## Convert things into string
+```{r echo = TRUE}
+# paste converts numerics to strings
+paste(1994, "10", 1)
+paste(2022, "10", 1)
+paste0(1994, "10", 1)
+paste0(2022, "10", 1)
+```
+## Combining them together
+```{r echo = TRUE}
+y <- 2020
+d <- "1st"
+m <- 4
+# Pseudocode
+# Combine y, m, and d into a string
+# Convert string to date
+```
+
+
+## Combining them together
+```{r}
+y <- 2020
+d <- "1st"
+m <- 4
+# Pseudocode
+# Combine y, m, and d into a string
+ex <- paste(y,d,m)
+# Convert string to date
+ymd(ex)
+
+# One-liner
+ymd(paste(y,d,m, sep = "-"))
+ymd(paste0(y,m,d)) # This fails why?
+```
+
+## Doing this on data.table
+Remember that data.table is vectorized
+```{r}
+library(data.table)
+?airquality
+aq <- as.data.table(airquality)
+year <- 1973
+head(aq)
+```
+## Doing this on data.table
+Remember that data.table is vectorized
+```{r}
+# Use paste in vectorized form
+aq[,paste(year,Month, Day)]
+# Converting to date
+aq[,ymd(paste(1973, Month, Day))]
+# Assigning to variable
+aq[, date := ymd(paste(1973, Month, Day))]
+```
+
+## Doing it outside data.table
+Remember that vectors are vectorized too
+```{r}
+# Lets get the vector only
+d <- aq[, Day]
+m <- aq$Month
+# Show that we only have the vector
+print(m)
+# Use the paste with dmy
+dmy(paste(d,m,1973))
+# Show that we get a vector back
+class(dmy(paste(d,m,1973)))
+# Put the vector back in
+aq$date2 <- dmy(paste(d,m,1973))
+```
+
+## PLM 
+```{r}
+# Removes all variables from my environment (helpful to put this at the top of your script)
+rm(list=ls()) 
+# Load my version of the clean data.
+readRDS("../homeworks")
+```
+
+
