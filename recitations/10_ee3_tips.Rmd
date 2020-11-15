@@ -49,7 +49,7 @@ ymd("200820")
 
 ## Lubridate converts strings to POSIXct
 ```{r}
-dmy("200820")
+ymd("190820")
 ymd("20.12.11")
 ymd("2020 November 4th")
 mdy('Nov 4 2020')
@@ -59,20 +59,23 @@ mdy('Nov042020')
 ## Convert things into string
 ```{r echo = TRUE}
 # paste converts numerics to strings
-paste(1994, "10", 1)
+paste(1994, "10", 1, sep = "-0")
 paste(2022, "10", 1)
 paste0(1994, "10", 1)
 paste0(2022, "10", 1)
+?paste
 ```
 
 ## Combining them together
 ```{r}
 y <- 2020
-d <- "1st"
+d <- "30st"
 m <- 4
 # Pseudocode
 # Combine y, m, and d into a string
+date_string <- paste(y,d,m, sep = '-')
 # Convert string to date
+ydm(date_string)
 ```
 
 
@@ -80,16 +83,21 @@ m <- 4
 ```{r warning = TRUE}
 y <- 2020
 d <- "1st"
-m <- 4
+m <- 11
 # Pseudocode
 # Combine y, m, and d into a string
 ex <- paste(y,d,m)
 # Convert string to date
-ymd(ex)
+ydm(paste(y,d,m))
 
+?strptime
+```
+
+
+```{r}
 # One-liner
-ymd(paste(y,d,m, sep = "-"))
-ymd(paste0(y,m,d)) # This fails why?
+ydm(paste(y,d,m, sep = "-"))
+ydm(paste0(y,m,d)) # This fails why?
 ```
 
 ## Parsing dates on data.table (setup)
@@ -104,12 +112,21 @@ head(aq)
 ## Doing this on data.table
 Remember that data.table is vectorized
 ```{r}
+# dt[i,j,by]
 # Use paste in vectorized form
 head(aq[,paste(year,Month, Day)])
 # Converting to date
 head(aq[,ymd(paste(1973, Month, Day))])
 # Assigning to variable
 aq[, date := ymd(paste(1973, Month, Day))]
+
+# First measurement in August where the Solar Radiation is larger than 240?
+# Filter August 
+# Filter for the solar radiation larger than 240
+# Find the first row
+setorder(aq, date)
+aq[(Month==8)&(Solar.R > 240)]
+aq[Month==8][Solar.R > 240]
 ```
 
 ## Doing it outside data.table
@@ -118,13 +135,14 @@ aq[, date := ymd(paste(1973, Month, Day))]
 d <- aq[, Day]
 m <- aq$Month
 # Show that we only have the vector
-head(m)
+head(d)
 # Use the paste with dmy
 head(dmy(paste(d,m,1973)))
 # Show that we get a vector back
 class(dmy(paste(d,m,1973)))
 # Put the vector back in
 aq$date2 <- dmy(paste(d,m,1973))
+aq[, date2 := dmy(paste(d,m,1973))]
 ```
 
 ## Load the PS3 dataset
@@ -134,6 +152,7 @@ rm(list=ls())
 # Load my version of the clean data.
 dt <- readRDS("../homeworks/hw3/data_clean.Rds")
 # (Save using saveRDS(data, "data_clean.Rds"))
+dt
 ```
 
 ## PLM vs LFE
@@ -167,13 +186,19 @@ head(dt[,.(reactor_id, yearmonth)])
 ```{r}
 # Set those as the index/key
 pdata <- pdata.frame(dt, c("reactor_id", "yearmonth"))
+
 # Reactor fixed effects, age cubed. (Within == fixed effects)
 r1 <- plm(capacity_factor ~ divested + as.factor(yearmonth) + age3, model = "pooling", pdata)
 r2 <- plm(capacity_factor ~ divested + as.factor(yearmonth), model = "within", pdata)
 #coeftest(r1, vcov=vcovHC(r1, cluster = "group"))
 
 # Omit the fixed effects in stargazer and fix the standard errors for plm
-stargazer(r1, r2, type = 'text', omit = c("yearmonth"), se =  list(sqrt(diag(vcovHC(r1,  cluster = "group"))), sqrt(diag(vcovHC(r2,  cluster = "group")))),omit.stat=c("adj.rsq","f"))
+stargazer(r1, r2, 
+          type = 'text', 
+          omit = c("yearmonth"), 
+          se =  list(sqrt(diag(vcovHC(r1,  cluster = "group"))), 
+                     sqrt(diag(vcovHC(r2,  cluster = "group")))),
+          omit.stat=c("adj.rsq","f"))
 ```
 
 ## LFE Example
@@ -188,7 +213,8 @@ library(lfe)
 r3 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, dt)
 r4 <- felm(capacity_factor ~ divested + age3 | as.factor(yearmonth) + reactor_id  | 0 | plant_id, dt, weights = dt$capacity)
 
-stargazer(r1,r2,r3,r4, type = 'text',  
+stargazer(r1,r2,r3,r4, 
+          type = 'text',  
           omit = c("yearmonth", "age", "Constant"),
           se =  list(sqrt(diag(vcovHC(r1,  cluster = "group"))), 
                      sqrt(diag(vcovHC(r2,  cluster = "group")))),
@@ -203,4 +229,13 @@ stargazer(r1,r2,r3,r4, type = 'text',
 
 ## Hint for the plant level
 Using PLM you'll want to change the index from reactor id to plant id. 
+
+
+## Help 
+
+```{r}
+
+dt[, .G, ]
+dt[, .N, manufacturer]
+```
 
