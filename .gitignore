@@ -13,6 +13,9 @@ Empirical Exercises/
 # Ignore data
 data/
 output/
+*.xlsx
+*.xls
+*.csv
 
 # Ignore latex compile intermediate
 *.aux
