@@ -1,0 +1,233 @@
+---
+title: "HW4_Solution"
+author: "Ignacia Mercadal"
+date: "12/12/2019"
+output: html_document
+---
+
+Edited by Eugene Tan
+
+```{r setup, include=FALSE}
+rm(list=ls())
+library(data.table)
+library(plm)
+library(lfe)
+library(ggplot2)
+library(stargazer)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The goal of this exercise is to evaluate the consequences of electric deregulation on the prices paid by consumers for electricity. For this, we will use data on prices that I downloaded from the EIA website (you can find the original data here).
+
+First, load the price data in prices.csv and do the following to prepare the data for the analysis:
+• Change variable names and remove the first row.
+• Convert relevant values to numerical, removing commas if necessary.
+• The table in the last page contains information about the dates in which the wholesale and retail markets were deregulated in each state. For the wholesale market, deregulation means that the market was opened to entry by any firm owning a generator. For the retail market, deregulation means that any firm can sell electricity to final consumers, and use the former regulated utility’s distribution network to deliver it to its customers. Based on this table, create two dummies.
+– treated: takes the value 1 when the wholesale market was deregulated in that state and year. For example, the dummy will have the value 1 for NJ in 2004, and a value of 0 for ME in 1996.
+– Create a dummy ever ever_dereg that takes the value 1 if that state’s wholesale market was ever deregulated and another dummy ever rdereg that takes the value 1 if that state’s retail market was ever deregulated.
+
+```{r Question 1: Data loading and preparation}
+## Load data ####
+#setwd(".")
+
+data <- data.table(read.csv("price.csv", stringsAsFactors=F))
+
+setnames(data,  c("year", "state", "industry_sector", "residential", "commercial", "industrial", "transportation", "other", "total"))
+data <- data[-1]
+data[, residential := as.numeric(residential)]
+data[, commercial := as.numeric(gsub(",","",commercial))]
+data[, industrial := as.numeric(industrial)]
+data[, transportation := as.numeric(transportation)]
+data[, other := as.numeric(other)]
+data[, total := as.numeric(total)]
+data[, year := as.numeric(year)]
+
+## Wholesale deregulation
+data[, treated := 0]
+data[state %in% c("TX") & year >= 1995, treated := 1]
+data[state %in% c("RI", "NY") & year >= 1997, treated := 1]
+data[state %in% c("CA", "NH") & year >= 1998, treated := 1]
+data[state %in% c("MA", "PA", "NJ", "DE", "MD", "CT") & 
+        year >= 1999, treated := 1]
+data[state %in% c("IL", "ME") & year >= 2000, treated := 1]
+data[state %in% c("OH") & year >= 2001, treated := 1]
+data[state %in% c("VA", "OR") & year >= 2002, treated := 1]
+data[state %in% c("RI", "NY") & year >= 1997, treated := 1]
+
+## Ever deregulated
+data[, ever_dereg := max(treated), by = state]
+data[, treated := as.logical(treated)]
+data[, ever_dereg := as.logical(ever_dereg)]
+#data[, treated := factor(treated, labels=c("Regulated", "Deregulated") )]
+#data[, ever_dereg := factor(ever_dereg, labels=c("Regulated", "Deregulated") )]
+
+
+# Look at the treatement
+setkey(data,state,year)
+ggplot(data[,.(treated),.(state, year)]) + 
+  geom_line(aes(x = year, y = as.numeric(treated), colour = state))
+
+# Look at ever dereg
+ggplot(data[,.(ever_dereg),.(state, year)]) + 
+  geom_line(aes(x = year, y = as.numeric(ever_dereg), colour = state))
+
+# Observe the industry sectors
+data[,unique(industry_sector)]
+
+```
+
+2.  Select the data where the industry sector category is the ”Total Electric Industry” and plot the evolution of prices over time using a separate line for states that were deregulated and states that were not deregulated (you can use the dummy ever ever_dereg created above). Do a separate plot for residential, commercial, and industrial customers
+
+```{r Question 2}
+
+data_plot <- copy(data[industry_sector == "Total Electric Industry"])
+data_plot[, mean_pr := mean(residential), by = list(year, ever_dereg)]
+data_plot[, mean_pc := mean(commercial), by = list(year, ever_dereg)]
+data_plot[, mean_pi := mean(industrial), by = list(year, ever_dereg)]
+data_plot <- unique(data_plot[, list(year, ever_dereg, mean_pr, mean_pc, mean_pi)])
+
+ggplot(data_plot, aes(x=year, y=mean_pr, color=ever_dereg, linetype=ever_dereg)) + 
+  geom_line() + xlab("Year") + ylab("Residential price") +
+  guides(color=guide_legend(title="")) +
+  scale_color_manual("", values=c("Dark blue", "Dark red"))+
+  scale_linetype_manual("", values=c("dashed", "solid")) +
+  ggtitle("Residential electricity prices in regulated and deregulated states")
+  
+```
+For commercial customers
+
+```{r 2. Commercial}
+
+ggplot(data_plot, aes(x=year, y=mean_pc, color=ever_dereg, linetype=ever_dereg)) + 
+  geom_line() + xlab("Year") + ylab("Commercial price") +
+  guides(color=guide_legend(title="")) +
+  scale_color_manual("", values=c("Dark blue", "Dark red"))+
+  scale_linetype_manual("", values=c("dashed", "solid")) +
+  ggtitle("Electricity prices for commercial customers")
+  
+```
+For industrial customers
+
+```{r, echo=F}
+ggplot(data_plot, aes(x=year, y=mean_pi, color=ever_dereg, linetype=ever_dereg)) + 
+  geom_line() + xlab("Year") + ylab("Industrial price") +
+  guides(color=guide_legend(title="")) +
+  scale_color_manual("", values=c("Dark blue", "Dark red"))+
+  scale_linetype_manual("", values=c("dashed", "solid")) +
+  ggtitle("Electricity prices for industrial customers")
+  
+```
+
+For all types of customers, states that deregulated had higher prices even before deregulation.
+
+3. Run a regression of price on deregulation status, separately for wholesale and retail deregulation, and for both residential and industrial customers. What do you find?
+
+For both wholesale and retail deregulation, and for all types of customers, prices seem to increase after deregulation.
+
+```{r Question 3, echo=F}
+### Deregulation
+
+reg1_rw <- felm(residential ~ treated | 0 | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg1_cw <- felm(commercial ~ treated| 0 | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg1_iw <- felm(industrial ~ treated| 0 | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+
+stargazer(reg1_rw, reg1_cw, reg1_iw, type="text")
+
+
+```
+4. What is the underlying assumption for the above estimates to be interpreted causally? Is this assumption reasonable? Explain and use data to support your answer if you can.
+
+These estimates can be interpreted causally if treated and control states are the same in every other factor that affects prices except for whether they passed deregulation measures or not. We know from the figures in the previous questions that the two groups of states were not similar, since prices in deregulated states were higher even before any state had deregulated. The coefficients are then likely to pick up this difference, which we know is not due to deregulation but to other factors. In other words, deregulation is not randomly assigned (it is endogenous). Instead, states with higher prices on average were more likely to deregulated (similar to people with worse health being more likely to go to a hospital).
+
+```{r}
+# Plot the residuals for residential
+dt <- data[industry_sector == "Total Electric Industry"]
+dt[,residuals :=reg1_rw$residuals]
+
+# Residuals aren't random around 0
+ggplot(dt) + 
+  geom_point(aes(year, residuals, colour =state))
+
+# What does the implied model look like
+ggplot(dt) +
+  geom_point(aes(year, residuals, colour = state)) + 
+```
+
+
+5. Now run the same regressions but adding state fixed effects. What do you find? (Make sure to cluster your standard errors at the state level)
+
+```{r}
+reg2_rw <- felm(residential ~ treated | state | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg2_cw <- felm(commercial ~ treated| state | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg2_iw <- felm(industrial ~ treated| state | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+stargazer(reg2_rw, reg2_cw, reg2_iw,  type="text")
+
+```
+
+Adding fixed effects does not significantly change the results. Though smaller, we still find that deregulation is linked to higher prices for all types of customers. 
+
+6. What is the underlying assumption for the above estimates to be interpreted causally? Is this assumption reasonable? Explain and use data to support your answer if you can.
+
+The state fixed effects help us to separate the effect of deregulation from differences across states that are constant over time. These estimates can be interpreted causally if prices in treated and control states do not differ over time for reasons unrelated to deregulation. If there is any factor that affects prices over time, we would wrongly attribute it to deregulation.
+
+This assumption is not likely to hold since we would expect fuel prices to vary over time, which leads to costs changing over time. This can be improved by including year fixed effects, which will capture changes over time that are common to all states.
+
+```{r}
+# Plot the residuals for residential
+dt <- data[industry_sector == "Total Electric Industry"]
+dt[,residuals :=reg2_rw$residuals]
+
+# Residuals aren't random around 0
+ggplot(dt) + 
+  geom_point(aes(year, residuals, colour =state))
+
+# What does the implied model look like
+ggplot(dt) +
+  geom_point(aes(year, residuals, colour = state))
+```
+
+
+7. Now run the same regressions but adding state and year fixed effects. What do you find? (Make sure to cluster your standard errors at the state level)
+
+```{r}
+reg3_rw <- felm(residential ~ treated| state + as.factor(year) | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg3_cw <- felm(commercial ~ treated| state + as.factor(year) | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+reg3_iw <- felm(industrial ~ treated| state + as.factor(year) | 0 | state, data = data[industry_sector == "Total Electric Industry"])
+
+stargazer(reg3_rw, reg3_cw, reg3_iw, type="text")
+
+```
+
+Adding year fixed effects makes the difference between regulated and deregulated states disappear.
+
+8. What is the underlying assumption for the above estimates to be interpreted causally? Is this assumption reasonable? Explain and use data to support your answer if you can.
+
+Here the assumption is that there are no time varying variables that affect prices in different states differently, which is known as common trends. We allow for differences across states using state fixed effects, and differences across time that are common across states using year fixed effects, but not time varying differences between states.
+Though this specification is more robust than the previous ones, it is still not enough to capture causal effects cleanly. The common trends assumption is not likely to hold since there are some time varying variables that affect different states differently, like fuel prices. There have been significant changes in fuel prices and these have different effects depending on the fuel mix of each state. Additionally, there are some policies implemented at the state level that could lead to time varying differences across states, like renewable portfolio standards. That said, it still looks like deregulation did not have a strong negative effects on prices, but we would need a better identification strategy to confirm the effect.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
